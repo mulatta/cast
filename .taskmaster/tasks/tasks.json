@@ -48,7 +48,7 @@
             "description": "schemas 디렉토리에 JSON 스키마 파일들을 생성하고, examples 디렉토리에 사용 예제를 위한 하위 디렉토리들을 구성합니다.",
             "dependencies": [],
             "details": "schemas/manifest-v1.json과 schemas/config-v1.json 파일을 플레이스홀더로 생성하여 기본 JSON 스키마 구조를 정의합니다. examples 디렉토리 아래에 simple-dataset/, transformation/, registry/ 하위 디렉토리를 생성하고 각각에 빈 README.md 파일을 추가합니다. 추후 구현될 예제들의 기반이 될 디렉토리 구조를 미리 준비합니다.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "모든 디렉토리가 올바르게 생성되었는지 find 명령으로 확인하고, tree 명령으로 전체 구조를 검증합니다."
           },
           {
@@ -432,7 +432,7 @@
     ],
     "metadata": {
       "created": "2025-11-17T15:10:33.104Z",
-      "updated": "2025-11-17T15:38:34.781Z",
+      "updated": "2025-11-17T15:43:34.257Z",
       "description": "Tasks for master context"
     }
   }

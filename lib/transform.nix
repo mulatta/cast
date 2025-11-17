@@ -1,9 +1,6 @@
 # Transform dataset
 # This will be fully implemented in task 9
-{
-  pkgs,
-  ...
-}: {
+{pkgs, ...}: {
   name,
   src,
   builder,
