@@ -16,6 +16,9 @@
       }: {
         _module.args.pkgs = import inputs.nixpkgs {
           inherit system;
+          overlays = [
+            inputs.rust-overlay.overlays.default
+          ];
           config.allowUnfree = true;
         };
 
@@ -25,15 +28,28 @@
         in
           {inherit (self') formatter;} // packages // devShells;
       };
+
+      flake = {
+        # CAST library functions for Nix
+        lib = import ./lib {
+          inherit (inputs.nixpkgs) lib;
+          pkgs = import inputs.nixpkgs {
+            system = "x86_64-linux";
+            overlays = [inputs.rust-overlay.overlays.default];
+          };
+        };
+      };
     };
 
   inputs = {
     # keep-sorted start
     flake-parts.inputs.nixpkgs-lib.follows = "nixpkgs";
     flake-parts.url = "github:hercules-ci/flake-parts";
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
-    systems.url = "github:nix-systems/default";
     nix-ai-tools.url = "github:numtide/nix-ai-tools";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    rust-overlay.inputs.nixpkgs.follows = "nixpkgs";
+    rust-overlay.url = "github:oxalica/rust-overlay";
+    systems.url = "github:nix-systems/default";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
     treefmt-nix.url = "github:numtide/treefmt-nix";
     # keep-sorted end

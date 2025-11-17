@@ -16,8 +16,8 @@
             "title": "flake.nix와 기본 Nix 설정 파일 생성",
             "description": "프로젝트 루트에 flake.nix 파일을 생성하고 nixpkgs, rust-overlay를 inputs로 설정하며, outputs에 lib, packages, devShells를 정의합니다.",
             "dependencies": [],
-            "details": "flake.nix 파일을 생성하여 inputs에 nixpkgs와 rust-overlay를 추가하고, outputs 섹션에서 lib (Nix 라이브러리 함수들), packages (cast-cli), devShells (개발 환경)를 정의합니다. 또한 flake.lock 파일이 생성되도록 nix flake update를 실행하고, .gitignore에 필요한 항목들을 추가합니다.",
-            "status": "pending",
+            "details": "flake.nix 파일을 생성하여 inputs에 nixpkgs와 rust-overlay를 추가하고, outputs 섹션에서 lib (Nix 라이브러리 함수들), packages (cast-cli), devShells (개발 환경)를 정의합니다. 또한 flake.lock 파일이 생성되도록 nix flake update를 실행하고, .gitignore에 필요한 항목들을 추가합니다.\n<info added on 2025-11-17T15:24:35.832Z>\nflake.nix 설정 성공적으로 완료:\n- flake inputs에 rust-overlay 입력 추가 (nixpkgs를 따르도록 설정)\n- pkgs 인스턴스화에서 rust-overlay 오버레이 구성\n- flake.outputs 섹션에 빈 lib 출력 추가 (task 1.2를 위한 플레이스홀더)\n- .gitignore에 Rust 관련 항목 업데이트 (target/, Cargo.lock, *.rs.bk, *.pdb)\n- nix flake update로 flake.lock 업데이트\n- nix flake check로 검증 (모든 체크 통과)\n- nix flake show로 출력 확인 (lib, devShells, formatter, checks 모두 확인됨)\n</info added on 2025-11-17T15:24:35.832Z>",
+            "status": "done",
             "testStrategy": "nix flake check 명령이 오류 없이 실행되는지 확인하고, nix flake show로 모든 outputs가 올바르게 표시되는지 검증합니다."
           },
           {
@@ -28,7 +28,7 @@
               1
             ],
             "details": "lib/default.nix를 생성하여 모든 라이브러리 함수를 export하고, 각 개별 파일(mkDataset.nix, fetchDatabase.nix, transform.nix, symlinkSubset.nix, manifest.nix, types.nix)에 스텁 함수를 구현합니다. 각 함수는 올바른 시그니처를 가지되 실제 구현은 플레이스홀더로 남겨둡니다. types.nix에는 manifestType, datasetType 등의 Nix 타입 정의를 추가합니다.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "nix eval .#lib로 라이브러리 함수들이 올바르게 export되는지 확인하고, 각 함수가 올바른 인자를 받아들이는지 테스트합니다."
           },
           {
@@ -210,7 +210,61 @@
           6
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "SQLite 연결 풀과 데이터베이스 초기화 구현",
+            "description": "SQLite 데이터베이스 연결 풀 설정과 초기화 로직을 구현하여 안정적인 데이터베이스 접근 기반을 마련합니다",
+            "dependencies": [],
+            "details": "sqlx::SqlitePool을 사용하여 연결 풀을 설정하고, 데이터베이스 파일이 없을 경우 자동으로 생성하는 로직을 구현합니다. 연결 풀 크기, 타임아웃, 재시도 정책 등의 설정을 포함하며, 데이터베이스 경로 유효성 검사와 에러 처리를 구현합니다",
+            "status": "pending",
+            "testStrategy": "연결 풀 생성 테스트, 데이터베이스 파일 자동 생성 확인, 동시 연결 처리 테스트, 연결 실패 시 재시도 동작 검증"
+          },
+          {
+            "id": 2,
+            "title": "스키마 생성과 마이그레이션 시스템 구축",
+            "description": "데이터베이스 스키마를 생성하고 버전 관리를 위한 마이그레이션 시스템을 구현합니다",
+            "dependencies": [
+              1
+            ],
+            "details": "objects, datasets, transformations 테이블과 필요한 인덱스를 생성하는 SQL 쿼리를 구현합니다. sqlx migrate 기능을 활용하여 스키마 버전을 관리하고, 향후 스키마 변경을 위한 마이그레이션 파일 구조를 설정합니다. 스키마 버전 체크와 자동 업그레이드 기능을 포함합니다",
+            "status": "pending",
+            "testStrategy": "스키마 생성 검증, 마이그레이션 적용 테스트, 스키마 버전 업그레이드 시나리오 테스트, 롤백 기능 확인"
+          },
+          {
+            "id": 3,
+            "title": "objects 테이블 CRUD 연산 구현",
+            "description": "콘텐츠 주소 지정 객체를 관리하기 위한 objects 테이블의 모든 CRUD 연산을 구현합니다",
+            "dependencies": [
+              2
+            ],
+            "details": "register_object, get_object, update_refs, delete_object 등의 메서드를 구현합니다. 참조 카운팅 로직을 정확하게 처리하고, ON CONFLICT 절을 사용한 upsert 연산을 구현합니다. 메타데이터 JSON 필드 처리와 created_at 타임스탬프 관리를 포함합니다",
+            "status": "pending",
+            "testStrategy": "각 CRUD 연산 단위 테스트, 참조 카운팅 정확성 검증, 동시 접근 시 데이터 일관성 테스트, 메타데이터 저장/조회 테스트"
+          },
+          {
+            "id": 4,
+            "title": "datasets와 transformations 테이블 연산 구현",
+            "description": "데이터셋과 변환 기록을 관리하는 테이블들의 연산을 구현합니다",
+            "dependencies": [
+              3
+            ],
+            "details": "register_dataset, find_datasets_by_name, get_dataset_versions, register_transformation, get_transformation_chain 등의 메서드를 구현합니다. 외래 키 제약 조건을 준수하고, 데이터셋 버전 관리와 변환 provenance 추적을 위한 쿼리를 최적화합니다",
+            "status": "pending",
+            "testStrategy": "데이터셋 등록/조회 테스트, 버전 관리 동작 확인, 변환 체인 추적 테스트, 외래 키 제약 조건 검증"
+          },
+          {
+            "id": 5,
+            "title": "인덱스 최적화와 트랜잭션 처리 구현",
+            "description": "쿼리 성능 최적화를 위한 인덱스 설정과 트랜잭션 처리 로직을 구현합니다",
+            "dependencies": [
+              4
+            ],
+            "details": "자주 사용되는 쿼리 패턴을 분석하여 적절한 인덱스를 생성하고, 복잡한 연산을 위한 트랜잭션 래퍼 메서드를 구현합니다. EXPLAIN QUERY PLAN을 활용한 쿼리 최적화와 데드락 방지 로직을 포함합니다. 배치 연산과 벌크 삽입 최적화도 구현합니다",
+            "status": "pending",
+            "testStrategy": "쿼리 성능 벤치마크 테스트, 트랜잭션 롤백 시나리오 테스트, 동시성 스트레스 테스트, 인덱스 효과 측정"
+          }
+        ]
       },
       {
         "id": 8,
@@ -224,7 +278,64 @@
           6
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "mkDataset 기본 derivation 구조와 manifest 처리 구현",
+            "description": "Nix derivation의 기본 구조를 설정하고 manifest 데이터를 파싱하여 처리하는 로직을 구현합니다.",
+            "dependencies": [],
+            "details": "lib/mkDataset.nix 파일에서 manifest 파라미터를 받아 파일 경로인 경우 JSON을 읽어 파싱하고, 이미 attrset인 경우 그대로 사용하는 로직을 구현합니다. pkgs.stdenv.mkDerivation을 사용하여 derivation을 생성하고, pname과 version을 설정하며, manifest.json을 $out 디렉토리에 복사하는 installPhase를 작성합니다.",
+            "status": "pending",
+            "testStrategy": "nix eval을 사용하여 manifest 파싱이 올바르게 되는지 확인하고, nix build로 derivation이 생성되는지 테스트합니다."
+          },
+          {
+            "id": 2,
+            "title": "CAS 경로 계산과 심링크 생성 로직 구현",
+            "description": "BLAKE3 해시를 기반으로 CAS 저장소의 실제 파일 경로를 계산하고 심링크를 생성하는 핵심 로직을 구현합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "hashToPath 함수를 구현하여 blake3: 프리픽스를 제거하고 계층적 디렉토리 구조(hash[:2]/hash[2:4]/full_hash)로 경로를 생성합니다. manifestData.contents의 각 파일에 대해 반복하면서 CAS 저장소의 실제 파일 위치를 찾고 $out/data 디렉토리에 심링크를 생성하는 스크립트를 작성합니다. 파일이 존재하지 않을 경우 경고 메시지를 출력하도록 처리합니다.",
+            "status": "pending",
+            "testStrategy": "테스트 manifest와 dummy CAS 파일들을 생성하여 심링크가 올바른 위치를 가리키는지 확인합니다."
+          },
+          {
+            "id": 3,
+            "title": "환경변수 자동 설정과 setupHook 구현",
+            "description": "데이터셋이 빌드 입력으로 사용될 때 자동으로 환경변수를 설정하는 setupHook 메커니즘을 구현합니다.",
+            "dependencies": [
+              2
+            ],
+            "details": "setupHook 스크립트를 생성하여 CAST_DATASET_<NAME> 형식의 환경변수를 자동으로 export하도록 구현합니다. 데이터셋 이름을 대문자로 변환하고 하이픈을 언더스코어로 치환하는 로직을 작성합니다. passthru 속성에 castDatasetName을 추가하여 다른 derivation에서 참조할 수 있도록 합니다. pkgs.writeText를 사용하여 setup-hook.sh 파일을 생성하고 $out 경로를 환경변수 값으로 설정합니다.",
+            "status": "pending",
+            "testStrategy": "nix develop 환경에서 데이터셋을 buildInputs에 추가하고 환경변수가 올바르게 설정되는지 확인합니다."
+          },
+          {
+            "id": 4,
+            "title": "중첩 디렉토리 구조 처리 구현",
+            "description": "manifest에 정의된 파일 경로가 중첩된 디렉토리 구조를 가질 때 필요한 디렉토리를 자동으로 생성하는 로직을 구현합니다.",
+            "dependencies": [
+              2
+            ],
+            "details": "dirname을 사용하여 파일 경로에서 디렉토리 부분을 추출하고 mkdir -p로 중첩된 디렉토리 구조를 생성합니다. 예를 들어 data/subfolder/file.txt 경로의 경우 $out/data/subfolder 디렉토리를 먼저 생성한 후 심링크를 만듭니다. lib.concatMapStrings를 사용하여 모든 파일에 대해 이 작업을 수행하는 bash 스크립트를 생성합니다.",
+            "status": "pending",
+            "testStrategy": "깊은 중첩 구조를 가진 manifest로 테스트하여 모든 디렉토리가 올바르게 생성되는지 확인합니다."
+          },
+          {
+            "id": 5,
+            "title": "통합 테스트와 에러 처리 구현",
+            "description": "전체 mkDataset 함수의 통합 테스트를 작성하고 다양한 에러 상황에 대한 처리를 구현합니다.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "CAST_STORE 환경변수가 설정되지 않았거나 storePath가 제공되지 않은 경우의 에러 처리를 구현합니다. manifest 파일이 없거나 잘못된 JSON 형식일 때의 에러 메시지를 개선합니다. CAS 파일이 존재하지 않을 때의 경고 메시지와 함께 빌드는 계속 진행되도록 처리합니다. examples/simple-dataset 디렉토리에 실제 사용 예제를 작성하고 nix flake check로 검증합니다.",
+            "status": "pending",
+            "testStrategy": "다양한 에러 시나리오(잘못된 manifest, 없는 CAS 파일, 환경변수 미설정 등)를 테스트하고 적절한 에러 메시지가 출력되는지 확인합니다."
+          }
+        ]
       },
       {
         "id": 9,
@@ -237,7 +348,72 @@
           8
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "transform.nix 기본 구조와 builder 통합 구현",
+            "description": "Nix derivation 구조를 생성하고 사용자 정의 builder를 통합하는 기본 transform.nix 파일 구현",
+            "dependencies": [],
+            "details": "lib/transform.nix 파일에 mkDerivation 기반 변환 파이프라인 구조를 구현합니다. src에서 manifest를 읽고, builder를 실행하며, outputs를 처리하는 3단계 phases (unpack, build, install)를 정의합니다. passthru로 srcManifest와 transformationType 메타데이터를 전달합니다.",
+            "status": "pending",
+            "testStrategy": "간단한 파일 복사 builder로 Nix derivation이 정상 빌드되는지 테스트, nix eval로 함수 시그니처 검증"
+          },
+          {
+            "id": 2,
+            "title": "CAST_OUTPUT 환경변수 처리와 디렉토리 관리",
+            "description": "변환 중 출력을 관리할 CAST_OUTPUT 환경변수 설정과 임시 디렉토리 관리 로직 구현",
+            "dependencies": [
+              1
+            ],
+            "details": "buildPhase에서 CAST_OUTPUT 환경변수를 설정하고 출력 디렉토리를 생성합니다. builder 스크립트가 이 디렉토리에 변환 결과를 쓸 수 있도록 export하고, 각 변환 단계에서 필요한 작업 디렉토리를 관리합니다. 다중 출력 지원을 위한 디렉토리 구조도 준비합니다.",
+            "status": "pending",
+            "testStrategy": "환경변수가 올바르게 설정되는지 확인, 임시 디렉토리 생성과 정리 테스트"
+          },
+          {
+            "id": 3,
+            "title": "cast-cli transform 명령어 Rust 구현",
+            "description": "Rust CLI에 transform 서브커맨드를 추가하고 변환 작업을 처리하는 로직 구현",
+            "dependencies": [
+              2
+            ],
+            "details": "packages/cast-cli/src/commands/transform.rs를 생성하여 --input-manifest, --output-dir, --transform-type 옵션을 처리합니다. 입력 manifest를 파싱하고, 출력 파일들을 해싱하며, 변환 정보를 포함한 새 manifest를 생성합니다. SQLite에 변환 기록을 저장하는 로직도 포함합니다.",
+            "status": "pending",
+            "testStrategy": "단위 테스트로 manifest 파싱과 생성 검증, 통합 테스트로 실제 파일 변환 테스트"
+          },
+          {
+            "id": 4,
+            "title": "변환 결과 CAS 저장과 manifest 생성",
+            "description": "변환된 파일들을 CAS에 저장하고 출력 manifest를 생성하는 installPhase 구현",
+            "dependencies": [
+              3
+            ],
+            "details": "installPhase에서 cast-cli transform 명령을 호출하여 CAST_OUTPUT의 파일들을 처리합니다. 각 출력 파일을 cast-cli put으로 CAS에 저장하고, 해시 값으로 심링크를 생성합니다. transformations 필드에 변환 이력을 기록한 manifest.json을 $out에 저장합니다.",
+            "status": "pending",
+            "testStrategy": "CAS에 파일이 올바르게 저장되는지 확인, 생성된 심링크가 유효한지 테스트, manifest의 transformations 필드 검증"
+          },
+          {
+            "id": 5,
+            "title": "변환 캐싱과 provenance 추적 구현",
+            "description": "동일한 입력에 대한 변환 결과를 캐싱하고 변환 체인을 추적하는 메커니즘 구현",
+            "dependencies": [
+              4
+            ],
+            "details": "SQLite의 transformations 테이블에 입력 해시, 변환 타입, 파라미터, 출력 해시를 저장합니다. cast-cli transform에서 캐시를 먼저 확인하여 동일한 변환은 건너뜁니다. manifest의 transformations 배열에 전체 변환 체인을 기록하여 데이터 출처를 추적 가능하게 합니다.",
+            "status": "pending",
+            "testStrategy": "동일한 변환을 두 번 실행했을 때 캐시가 사용되는지 확인, provenance 체인이 올바르게 기록되는지 검증"
+          },
+          {
+            "id": 6,
+            "title": "다양한 변환 시나리오 종합 테스트",
+            "description": "파일 복사, 압축 해제, 포맷 변환 등 다양한 실제 변환 시나리오를 테스트",
+            "dependencies": [
+              5
+            ],
+            "details": "examples/transformation/에 여러 변환 예제를 구현합니다. tar.gz 해제, CSV to JSON 변환, 이미지 리사이징 등 실제 사용 케이스를 테스트합니다. 각 예제에서 캐싱이 작동하고, provenance가 기록되며, 심링크 팜이 올바르게 생성되는지 확인합니다.",
+            "status": "pending",
+            "testStrategy": "각 변환 예제가 nix build로 성공하는지 테스트, 변환 결과 파일의 내용 검증, 캐시 히트율 측정"
+          }
+        ]
       },
       {
         "id": 10,
@@ -256,7 +432,7 @@
     ],
     "metadata": {
       "created": "2025-11-17T15:10:33.104Z",
-      "updated": "2025-11-17T15:10:33.105Z",
+      "updated": "2025-11-17T15:26:32.691Z",
       "description": "Tasks for master context"
     }
   }
