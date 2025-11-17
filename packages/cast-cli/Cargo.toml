@@ -1,0 +1,43 @@
+[package]
+name = "cast-cli"
+version = "0.1.0"
+edition = "2021"
+authors = ["CAST Contributors"]
+description = "Content-Addressed Storage Tool - CLI for managing large scientific databases"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/yourusername/cast"
+
+[dependencies]
+# Hashing
+blake3 = "1.5"
+
+# Async runtime
+tokio = { version = "1.40", features = ["full"] }
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
+
+# CLI
+clap = { version = "4.5", features = ["derive", "env"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "2.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Configuration
+toml = "0.8"
+
+# Additional utilities
+futures = "0.3"
+
+[[bin]]
+name = "cast"
+path = "src/main.rs"

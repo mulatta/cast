@@ -27,8 +27,8 @@
             "dependencies": [
               1
             ],
-            "details": "lib/default.nix를 생성하여 모든 라이브러리 함수를 export하고, 각 개별 파일(mkDataset.nix, fetchDatabase.nix, transform.nix, symlinkSubset.nix, manifest.nix, types.nix)에 스텁 함수를 구현합니다. 각 함수는 올바른 시그니처를 가지되 실제 구현은 플레이스홀더로 남겨둡니다. types.nix에는 manifestType, datasetType 등의 Nix 타입 정의를 추가합니다.",
-            "status": "in-progress",
+            "details": "lib/default.nix를 생성하여 모든 라이브러리 함수를 export하고, 각 개별 파일(mkDataset.nix, fetchDatabase.nix, transform.nix, symlinkSubset.nix, manifest.nix, types.nix)에 스텁 함수를 구현합니다. 각 함수는 올바른 시그니처를 가지되 실제 구현은 플레이스홀더로 남겨둡니다. types.nix에는 manifestType, datasetType 등의 Nix 타입 정의를 추가합니다.\n<info added on 2025-11-17T15:29:28.765Z>\n구현 완료 내역:\n\nlib/ 디렉토리 구조 생성:\n- lib/default.nix: nixpkgs lib과 pkgs를 받아 모든 라이브러리 함수 export (fetchDatabase, manifest, mkDataset, symlinkSubset, transform, types)\n- lib/mkDataset.nix: 데이터셋 derivation 생성 스텁, 시그니처 {name, version, manifest, storePath?}로 구현\n- lib/fetchDatabase.nix: 데이터베이스 다운로드 및 등록 스텁, 시그니처 {name, url, hash?, extract?, metadata?}로 구현  \n- lib/transform.nix: 데이터 변환 파이프라인 스텁, 시그니처 {name, src, builder, outputs?}로 구현\n- lib/symlinkSubset.nix: 심링크 서브셋 생성 스텁, 시그니처 {name, paths}로 구현\n- lib/manifest.nix: 매니페스트 유틸리티 함수 3개 export (readManifest, hashToPath, manifestToEnv)\n- lib/types.nix: Nix 타입 정의 - manifestType, datasetType, sourceType, contentType, transformationType 포함\n\nflake.nix 업데이트:\n- lib 속성을 ./lib import로 설정, nixpkgs lib과 pkgs 인스턴스 전달\n\n검증 결과:\n- `nix eval .#lib` 실행 시 6개 export 모두 나열됨 \n- mkDataset 인자: manifest, name, storePath(옵션), version 확인\n- fetchDatabase 인자: extract(옵션), hash(옵션), metadata(옵션), name, url 확인\n- manifest.{hashToPath, manifestToEnv, readManifest} 3개 유틸리티 함수 export 확인\n- 모든 스텁 함수가 플레이스홀더 반환, 추후 구현을 위한 준비 완료\n</info added on 2025-11-17T15:29:28.765Z>",
+            "status": "done",
             "testStrategy": "nix eval .#lib로 라이브러리 함수들이 올바르게 export되는지 확인하고, 각 함수가 올바른 인자를 받아들이는지 테스트합니다."
           },
           {
@@ -39,7 +39,7 @@
               1
             ],
             "details": "packages/cast-cli/Cargo.toml 파일을 생성하여 프로젝트 메타데이터와 필요한 의존성(blake3, sqlx, tokio, anyhow, clap 등)을 정의합니다. src/main.rs에 기본 CLI 구조를 구현하고, src/storage/mod.rs, src/hash.rs, src/manifest.rs, src/db.rs 파일들을 플레이스홀더로 생성합니다. 또한 README.md 파일을 추가하여 CLI 도구의 목적과 사용법을 간단히 문서화합니다.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "cargo build --manifest-path packages/cast-cli/Cargo.toml 명령이 성공적으로 실행되는지 확인하고, cargo test로 기본 테스트가 통과하는지 검증합니다."
           },
           {
@@ -432,7 +432,7 @@
     ],
     "metadata": {
       "created": "2025-11-17T15:10:33.104Z",
-      "updated": "2025-11-17T15:26:32.691Z",
+      "updated": "2025-11-17T15:30:04.798Z",
       "description": "Tasks for master context"
     }
   }

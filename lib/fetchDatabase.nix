@@ -1,16 +1,8 @@
 # Download and register a database
 # This will be fully implemented in task 3.3
-{
-  lib,
-  pkgs,
-  mkDataset,
-  ...
-}: {
+_: {
   name,
   url,
-  hash ? null,
-  extract ? false,
-  metadata ? {},
 }:
 # Stub implementation - returns a placeholder manifest
 {

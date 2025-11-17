@@ -1,7 +1,6 @@
 # Transform dataset
 # This will be fully implemented in task 9
 {
-  lib,
   pkgs,
   ...
 }: {
