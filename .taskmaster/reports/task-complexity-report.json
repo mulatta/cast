@@ -1,0 +1,93 @@
+{
+	"meta": {
+		"generatedAt": "2025-11-17T15:13:31.144Z",
+		"tasksAnalyzed": 10,
+		"totalTasks": 10,
+		"analysisCount": 10,
+		"thresholdScore": 5,
+		"projectName": "Taskmaster",
+		"usedResearch": false
+	},
+	"complexityAnalysis": [
+		{
+			"taskId": 1,
+			"taskTitle": "프로젝트 구조 스켈레톤 생성",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "다음 하위 작업으로 구분하여 구현: 1) flake.nix와 기본 Nix 설정 파일 생성, 2) lib/ 디렉토리와 모든 Nix 라이브러리 스텁 파일 생성, 3) Rust CLI 프로젝트 초기 구조 설정, 4) 스키마와 예제 디렉토리 구조 생성, 5) 개발 환경 설정 파일 (formatter.nix, shell.nix) 작성",
+			"reasoning": "여러 프로그래밍 언어(Nix, Rust)와 다양한 디렉토리 구조를 포함하며, 각 파일이 서로 의존성을 가지고 올바르게 연동되어야 하므로 복잡도가 높음. 전체 프로젝트의 기반이 되는 작업이므로 체계적인 분할이 필요함."
+		},
+		{
+			"taskId": 2,
+			"taskTitle": "Manifest JSON 스키마 정의",
+			"complexityScore": 4,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "다음 단계로 구현: 1) JSON Schema 파일 작성과 필수/선택 필드 정의, 2) ajv-cli 통합 및 검증 스크립트 작성, 3) 유효한/무효한 예제 매니페스트 파일 작성 및 테스트",
+			"reasoning": "JSON Schema 작성은 비교적 단순하지만, 검증 도구 통합과 테스트 케이스 작성이 필요하므로 중간 정도의 복잡도를 가짐."
+		},
+		{
+			"taskId": 3,
+			"taskTitle": "Nix 라이브러리 API 구현",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "각 라이브러리 함수별로 분리하여 구현: 1) lib/default.nix와 기본 export 구조 설정, 2) mkDataset 함수 구현, 3) fetchDatabase 함수 구현, 4) transform 함수 구현, 5) symlinkSubset과 manifest 유틸리티 함수 구현, 6) types.nix 타입 정의 및 flake checks 테스트 작성",
+			"reasoning": "Nix의 고급 기능을 사용하여 여러 복잡한 함수를 구현해야 하며, 각 함수가 서로 연동되어야 하고 derivation 빌드와 관련된 복잡한 로직이 포함되어 있음."
+		},
+		{
+			"taskId": 4,
+			"taskTitle": "Rust CLI 기본 구조 설정",
+			"complexityScore": 6,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "다음 모듈별로 구현: 1) Cargo.toml 설정과 의존성 관리, 2) main.rs와 CLI 명령어 파싱 구조, 3) 기본 모듈 구조(storage, hash, manifest, db) 스텁 생성, 4) 기본 유닛 테스트와 CI 설정",
+			"reasoning": "여러 Rust 크레이트를 통합하고 모듈화된 구조를 설계해야 하며, async 프로그래밍과 에러 처리 패턴을 확립해야 하므로 중상 정도의 복잡도를 가짐."
+		},
+		{
+			"taskId": 5,
+			"taskTitle": "BLAKE3 해싱 구현",
+			"complexityScore": 3,
+			"recommendedSubtasks": 2,
+			"expansionPrompt": "다음 기능으로 분리: 1) 기본 BLAKE3 해싱 함수와 파일/바이트 처리 구현, 2) 대용량 파일 스트리밍 처리와 테스트 작성",
+			"reasoning": "BLAKE3 라이브러리를 활용한 비교적 직관적인 구현이며, 주로 I/O 최적화와 테스트에 초점을 맞추면 되므로 복잡도가 낮음."
+		},
+		{
+			"taskId": 6,
+			"taskTitle": "로컬 스토리지 백엔드 구현",
+			"complexityScore": 6,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "다음 컴포넌트로 구현: 1) StorageBackend trait 정의와 기본 구조, 2) LocalStorage 구현과 계층적 디렉토리 관리, 3) 설정 로딩 시스템(환경변수, config.toml), 4) 동시성 처리와 통합 테스트",
+			"reasoning": "async trait 구현, 파일시스템 관리, 설정 우선순위 처리 등 여러 측면을 고려해야 하며, 동시성과 에러 처리가 중요하므로 중상 정도의 복잡도."
+		},
+		{
+			"taskId": 7,
+			"taskTitle": "SQLite 메타데이터 데이터베이스 구현",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "다음 단계로 구현: 1) SQLite 연결 풀과 데이터베이스 초기화, 2) 스키마 생성과 마이그레이션 시스템, 3) objects 테이블 CRUD 연산, 4) datasets와 transformations 테이블 연산, 5) 인덱스 최적화와 트랜잭션 처리 및 테스트",
+			"reasoning": "복잡한 SQL 스키마 설계, sqlx 통합, 마이그레이션, 트랜잭션 처리, 참조 카운팅 로직 등 데이터베이스 관련 여러 고급 기능을 구현해야 함."
+		},
+		{
+			"taskId": 8,
+			"taskTitle": "Nix 통합 및 심링크 팜 생성",
+			"complexityScore": 8,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "다음 기능별로 구현: 1) mkDataset 기본 derivation 구조와 manifest 처리, 2) CAS 경로 계산과 심링크 생성 로직, 3) 환경변수 자동 설정과 setupHook, 4) 중첩 디렉토리 구조 처리, 5) 통합 테스트와 에러 처리",
+			"reasoning": "Nix derivation과 CAS 시스템의 복잡한 통합, 심링크 팜 생성, 환경변수 관리 등 여러 시스템 간의 상호작용을 구현해야 하므로 복잡도가 높음."
+		},
+		{
+			"taskId": 9,
+			"taskTitle": "변환 파이프라인 시스템 구현",
+			"complexityScore": 9,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "다음 컴포넌트로 구현: 1) transform.nix 기본 구조와 builder 통합, 2) CAST_OUTPUT 환경변수 처리와 디렉토리 관리, 3) cast-cli transform 명령어 구현, 4) 변환 결과 CAS 저장과 manifest 생성, 5) 변환 캐싱과 provenance 추적, 6) 다양한 변환 시나리오 테스트",
+			"reasoning": "Nix derivation, Rust CLI, CAS 시스템이 모두 연동되는 가장 복잡한 기능이며, 캐싱, provenance 추적, 다양한 변환 타입 지원 등 고급 기능이 필요함."
+		},
+		{
+			"taskId": 10,
+			"taskTitle": "예제 및 문서화 완성",
+			"complexityScore": 5,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "다음 문서별로 작성: 1) 기본 사용 예제(simple-dataset) 구현, 2) 변환 예제(transformation)와 레지스트리 예제 구현, 3) README.md 작성(설치, 튜토리얼, API 레퍼런스), 4) CLI 도움말과 man 페이지 생성",
+			"reasoning": "문서화 작업은 기술적 복잡도는 낮지만, 포괄적이고 사용자 친화적인 예제와 문서를 작성하려면 상당한 노력이 필요하며, 모든 기능이 완성된 후에 작성 가능함."
+		}
+	]
+}

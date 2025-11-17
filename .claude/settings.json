@@ -1,0 +1,111 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(readlink:*)",
+      "Bash(pwd:)",
+      "Bash(echo:*)",
+      "Bash(which:*)",
+
+      "Bash(jj status:*)",
+      "Bash(jj show:*)",
+      "Bash(jj log:*)",
+      "Bash(jj diff:*)",
+      "Bash(jj evolog:*)",
+      "Bash(jj obslog:*)",
+      "Bash(jj op log:*)",
+      "Bash(jj op show:*)",
+      "Bash(jj file list:*)",
+      "Bash(jj file show:*)",
+      "Bash(jj branches:*)",
+      "Bash(jj bookmark list:*)",
+      "Bash(jj tags:*)",
+
+      "Bash(jj commit:*)",
+      "Bash(jj new:*)",
+      "Bash(jj describe:*)",
+      "Bash(jj sign:*)",
+      "Bash(jj squash:*)",
+      "Bash(jj unsquash:*)",
+      "Bash(jj split:*)",
+      "Bash(jj move:*)",
+      "Bash(jj edit:*)",
+      "Bash(jj next:*)",
+      "Bash(jj prev:*)",
+
+      "Bash(jj rebase:*)",
+      "Bash(jj resolve:*)",
+      "Bash(jj restore:*)",
+      "Bash(jj abandon:*)",
+      "Bash(jj undo:*)",
+      "Bash(jj op undo:*)",
+      "Bash(jj op restore:*)",
+
+      "Bash(git:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(tree:*)",
+      "Bash(wc:*)",
+      "Bash(file:*)",
+      "Bash(stat:*)",
+      "Bash(df:*)",
+      "Bash(du:*)"
+    ],
+    "deny": [
+      "Bash(jj git push:*)",
+      "Bash(jj git fetch:*)",
+      "Bash(jj bookmark push:*)",
+      "Bash(jj bookmark track:*)",
+      "Bash(jj bookmark untrack:*)"
+    ],
+    "ask": [
+      "Bash(jj git clone:*)",
+      "Bash(jj git remote:*)",
+      "Bash(jj bookmark create:*)",
+      "Bash(jj bookmark delete:*)",
+      "Bash(jj bookmark rename:*)"
+    ]
+  },
+  "mcpServer": {
+    "task-master-ai": {
+      "command": "/nix/store/51gywl5jn4nna7al9waj142pw4vfhy0k-nodejs-22.19.0/bin/npx",
+      "args": ["-y", "task-master-ai"]
+    }
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/nix/store/61kbah9hdygl49g8xyp8gnjn6msvnicy-claude-hook-session-start/bin/claude-hook-session-start"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/nix/store/wic7xw0xqw7ybj8g8yk02x1wld57738z-claude-hook-notify-command/bin/claude-hook-notify-command"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/nix/store/bcw4rmyrp9jn2j7w1f0a0ri0j03iv8hg-claude-hook-notify-complete/bin/claude-hook-notify-complete"
+          }
+        ]
+      }
+    ]
+  }
+}
