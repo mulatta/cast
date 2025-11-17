@@ -9,7 +9,7 @@
         "testStrategy": "nix flake check가 성공적으로 실행되는지 확인, nix develop로 개발 셸 진입 가능 여부 테스트, 모든 디렉토리가 생성되었는지 확인",
         "priority": "high",
         "dependencies": [],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -61,7 +61,7 @@
               3
             ],
             "details": "dev/formatter.nix 파일을 생성하여 alejandra를 코드 포매터로 설정하고, dev/shell.nix에서 rust-analyzer, cargo-watch, clippy, rustfmt 등 Rust 개발에 필요한 도구들을 포함하는 개발 셸을 정의합니다. 또한 환경 변수 설정과 셸 hook을 추가하여 개발자가 nix develop 명령으로 즉시 개발을 시작할 수 있도록 구성합니다.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "nix develop 명령으로 개발 셸에 진입할 수 있는지 확인하고, 셸 내에서 cargo, rust-analyzer 등의 도구가 사용 가능한지 검증합니다."
           }
         ]
@@ -76,7 +76,7 @@
         "dependencies": [
           1
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -97,7 +97,7 @@
             "description": "Nix 라이브러리의 진입점인 lib/default.nix 파일을 생성하고, 모든 하위 모듈을 import하여 export하는 기본 구조를 구현합니다.",
             "dependencies": [],
             "details": "lib/default.nix 파일을 생성하여 mkDataset, fetchDatabase, transform, symlinkSubset, manifest, types 모듈을 import하고 rec 속성셋으로 export합니다. 각 모듈 파일의 스켈레톤도 함께 생성하여 후속 작업이 가능하도록 합니다.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "nix eval로 라이브러리가 올바르게 로드되는지 확인, 각 함수가 접근 가능한지 테스트"
           },
           {
@@ -107,8 +107,8 @@
             "dependencies": [
               1
             ],
-            "details": "lib/mkDataset.nix에서 manifest를 파싱하여 각 파일의 BLAKE3 해시를 CAS 경로로 변환하고, /nix/store에 심링크 팜을 생성하는 derivation을 구현합니다. CAST_STORE 환경변수와 storePath 파라미터를 지원하며, 환경변수 export 기능도 포함합니다.",
-            "status": "pending",
+            "details": "lib/mkDataset.nix에서 manifest를 파싱하여 각 파일의 BLAKE3 해시를 CAS 경로로 변환하고, /nix/store에 심링크 팜을 생성하는 derivation을 구현합니다. CAST_STORE 환경변수와 storePath 파라미터를 지원하며, 환경변수 export 기능도 포함합니다.\n<info added on 2025-11-17T15:59:34.907Z>\nmkDataset 함수 구현 완료:\n\n주요 구현 내용:\n- manifest를 경로(자동 파싱) 또는 attrset으로 직접 받아 처리\n- CAST 저장소 경로 우선순위: storePath 파라미터 > CAST_STORE 환경변수 > ~/.cache/cast 기본값\n- 디렉토리 구조를 보존하며 완전한 심링크 팜 생성\n- jq를 사용하여 manifest 파싱 및 빌드 중 심링크 생성\n- 해시-경로 변환 규칙: store/{hash[:2]}/{hash[2:4]}/{full_hash}\n- 출력 구조: data/ (심링크), manifest.json, dataset-info.json\n- passthru 속성: manifestData, castStorePath, shellVars로 셸 통합 지원\n- 환경변수 자동 설정: CAST_DATASET_<NAME>, _VERSION, _MANIFEST\n\n테스트 결과:\n- 함수 시그니처 검증 완료: manifest, name, storePath, version\n- nix flake check: 모든 체크 통과\n- nix fmt: 코드 포맷팅 완료\n\n커밋: yzmlzpqu 70532253\n</info added on 2025-11-17T15:59:34.907Z>",
+            "status": "done",
             "testStrategy": "테스트 manifest로 derivation 빌드 확인, 생성된 심링크가 올바른 CAS 경로를 가리키는지 검증"
           },
           {
@@ -432,7 +432,7 @@
     ],
     "metadata": {
       "created": "2025-11-17T15:10:33.104Z",
-      "updated": "2025-11-17T15:43:34.257Z",
+      "updated": "2025-11-17T15:59:34.989Z",
       "description": "Tasks for master context"
     }
   }
