@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cast.example.com/schemas/config-v1.json",
+  "title": "CAST Configuration Schema v1.0",
+  "description": "Schema for CAST storage configuration",
+  "type": "object",
+  "properties": {
+    "storage": {
+      "type": "object",
+      "required": ["type", "root"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["local", "tiered", "remote"],
+          "default": "local",
+          "description": "Storage backend type"
+        },
+        "root": {
+          "type": "string",
+          "description": "Root path for CAS storage"
+        },
+        "gc": {
+          "type": "object",
+          "description": "Garbage collection settings",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable automatic garbage collection"
+            },
+            "min_free_space": {
+              "type": "string",
+              "pattern": "^[0-9]+(KB|MB|GB|TB)$",
+              "description": "Minimum free space before GC triggers"
+            },
+            "keep_recent_days": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 30,
+              "description": "Keep objects accessed in last N days"
+            }
+          }
+        }
+      }
+    },
+    "tiers": {
+      "type": "array",
+      "description": "Storage tier configuration (for tiered backend)",
+      "items": {
+        "type": "object",
+        "required": ["path"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Storage tier path"
+          },
+          "max_size": {
+            "type": "string",
+            "pattern": "^[0-9]+(KB|MB|GB|TB)$",
+            "description": "Maximum size for this tier"
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tier priority (lower = higher priority)"
+          }
+        }
+      }
+    }
+  }
+}

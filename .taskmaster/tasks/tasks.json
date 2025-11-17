@@ -38,8 +38,8 @@
             "dependencies": [
               1
             ],
-            "details": "packages/cast-cli/Cargo.toml 파일을 생성하여 프로젝트 메타데이터와 필요한 의존성(blake3, sqlx, tokio, anyhow, clap 등)을 정의합니다. src/main.rs에 기본 CLI 구조를 구현하고, src/storage/mod.rs, src/hash.rs, src/manifest.rs, src/db.rs 파일들을 플레이스홀더로 생성합니다. 또한 README.md 파일을 추가하여 CLI 도구의 목적과 사용법을 간단히 문서화합니다.",
-            "status": "in-progress",
+            "details": "packages/cast-cli/Cargo.toml 파일을 생성하여 프로젝트 메타데이터와 필요한 의존성(blake3, sqlx, tokio, anyhow, clap 등)을 정의합니다. src/main.rs에 기본 CLI 구조를 구현하고, src/storage/mod.rs, src/hash.rs, src/manifest.rs, src/db.rs 파일들을 플레이스홀더로 생성합니다. 또한 README.md 파일을 추가하여 CLI 도구의 목적과 사용법을 간단히 문서화합니다.\n<info added on 2025-11-17T15:37:31.770Z>\n구현 완료 상세 내역:\n\n성공적으로 생성된 파일들:\n- packages/cast-cli/Cargo.toml: blake3, tokio, sqlx, clap, serde 등 모든 필수 의존성 명시\n- packages/cast-cli/src/main.rs: clap derive를 사용한 CLI 인터페이스 (put, get, fetch, transform, gc 명령어 구현)\n- packages/cast-cli/src/storage/mod.rs: StorageBackend trait 정의 (put, get, exists, delete 메서드)\n- packages/cast-cli/src/storage/backend.rs: trait 정의\n- packages/cast-cli/src/storage/local.rs: LocalStorage 구현체 스텁\n- packages/cast-cli/src/hash.rs: Blake3Hash 구조체 구현 (from_file, from_bytes, to_string, verify 메서드)\n- packages/cast-cli/src/manifest.rs: 스키마 v1.0과 일치하는 완전한 Manifest 타입 정의 (Dataset, Source, Content, Transformation)\n- packages/cast-cli/src/db.rs: MetadataDb async 래퍼 구현 (new, register_object, find_datasets_by_name)\n- packages/cast-cli/README.md: CLI 명령어 사용법, 빌드, 테스트 방법 문서화\n\n검증 결과:\n- cargo build: 15.70초 만에 성공적으로 빌드 완료 (스텁 코드로 인한 예상된 dead_code 경고 발생)\n- cargo test: 4개 테스트 모두 통과 (test_cli_parsing, test_hash_from_bytes, test_manifest_serialization, test_db_creation)\n- nix fmt: 28개 파일 처리, 2개 파일 포맷팅 적용\n\nJujutsu 커밋: mtkpqxvs 088a27ee \"feat(task-1.3): implement Rust CLI project structure\"\n</info added on 2025-11-17T15:37:31.770Z>",
+            "status": "done",
             "testStrategy": "cargo build --manifest-path packages/cast-cli/Cargo.toml 명령이 성공적으로 실행되는지 확인하고, cargo test로 기본 테스트가 통과하는지 검증합니다."
           },
           {
@@ -48,7 +48,7 @@
             "description": "schemas 디렉토리에 JSON 스키마 파일들을 생성하고, examples 디렉토리에 사용 예제를 위한 하위 디렉토리들을 구성합니다.",
             "dependencies": [],
             "details": "schemas/manifest-v1.json과 schemas/config-v1.json 파일을 플레이스홀더로 생성하여 기본 JSON 스키마 구조를 정의합니다. examples 디렉토리 아래에 simple-dataset/, transformation/, registry/ 하위 디렉토리를 생성하고 각각에 빈 README.md 파일을 추가합니다. 추후 구현될 예제들의 기반이 될 디렉토리 구조를 미리 준비합니다.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "모든 디렉토리가 올바르게 생성되었는지 find 명령으로 확인하고, tree 명령으로 전체 구조를 검증합니다."
           },
           {
@@ -432,7 +432,7 @@
     ],
     "metadata": {
       "created": "2025-11-17T15:10:33.104Z",
-      "updated": "2025-11-17T15:30:04.798Z",
+      "updated": "2025-11-17T15:38:34.781Z",
       "description": "Tasks for master context"
     }
   }

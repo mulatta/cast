@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cast.example.com/schemas/manifest-v1.json",
+  "title": "CAST Manifest Schema v1.0",
+  "description": "Schema for CAST dataset manifests",
+  "type": "object",
+  "required": ["schema_version", "dataset", "source", "contents"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Manifest schema version"
+    },
+    "dataset": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Dataset identifier name"
+        },
+        "version": {
+          "type": "string",
+          "description": "Dataset version"
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional dataset description"
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Source URL"
+        },
+        "download_date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Download timestamp (ISO 8601)"
+        },
+        "server_mtime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server modification time (ISO 8601)"
+        },
+        "archive_hash": {
+          "type": "string",
+          "pattern": "^blake3:[a-f0-9]{64}$",
+          "description": "BLAKE3 hash of the archive"
+        }
+      }
+    },
+    "contents": {
+      "type": "array",
+      "description": "List of files in the dataset",
+      "items": {
+        "type": "object",
+        "required": ["path", "hash", "size"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Relative path to file"
+          },
+          "hash": {
+            "type": "string",
+            "pattern": "^blake3:[a-f0-9]{64}$",
+            "description": "BLAKE3 hash of file content"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "File size in bytes"
+          },
+          "executable": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether file is executable"
+          }
+        }
+      }
+    },
+    "transformations": {
+      "type": "array",
+      "description": "Transformation provenance chain",
+      "default": [],
+      "items": {
+        "type": "object",
+        "required": ["type", "from"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Transformation type identifier"
+          },
+          "from": {
+            "type": "string",
+            "description": "Input hash"
+          },
+          "params": {
+            "type": "object",
+            "description": "Transformation parameters"
+          }
+        }
+      }
+    }
+  }
+}
