@@ -291,6 +291,10 @@
             overlays = [inputs.rust-overlay.overlays.default];
           };
         };
+
+        # NixOS module for system-wide CAST database management
+        nixosModules.cast = import ./modules/cast.nix;
+        nixosModules.default = import ./modules/cast.nix;
       };
     };
 
