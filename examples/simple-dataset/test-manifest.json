@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "dataset": {
+    "name": "example-dataset",
+    "version": "2024-01-01",
+    "description": "Example dataset for testing CAST"
+  },
+  "source": {
+    "url": "https://example.com/data.tar.gz",
+    "download_date": "2024-01-01T00:00:00Z",
+    "server_mtime": "2024-01-01T00:00:00Z",
+    "archive_hash": "blake3:0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "contents": [
+    {
+      "path": "data.txt",
+      "hash": "blake3:af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262",
+      "size": 12,
+      "executable": false
+    },
+    {
+      "path": "subdir/nested.txt",
+      "hash": "blake3:2d3adedff11b61f14c886e35afa036736dcd87a74d27b5c1510225d0f592e6c9",
+      "size": 18,
+      "executable": false
+    }
+  ],
+  "transformations": []
+}

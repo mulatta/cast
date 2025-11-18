@@ -81,6 +81,18 @@ in
       EOF
     '';
 
+    # Setup hook for automatic environment variable export
+    # When this dataset is added to buildInputs, the environment variables are automatically set
+    setupHook = pkgs.writeText "setup-hook.sh" ''
+      castDatasetHook() {
+        export CAST_DATASET_${datasetEnvName}="$1/data"
+        export CAST_DATASET_${datasetEnvName}_VERSION="${version}"
+        export CAST_DATASET_${datasetEnvName}_MANIFEST="$1/manifest.json"
+      }
+
+      addEnvHooks "$hostOffset" castDatasetHook
+    '';
+
     passthru = {
       inherit manifest manifestData storePath;
       castDatasetName = datasetEnvName;
@@ -96,7 +108,8 @@ in
 
     meta = with lib; {
       description = manifestData.dataset.description or "CAST dataset: ${name}";
-      license = licenses.unfree; # Default, should be overridden
+      # Default to free license - data is typically not subject to software licenses
+      license = licenses.free;
       platforms = platforms.all;
     };
   }
