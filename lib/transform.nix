@@ -117,40 +117,46 @@
 
       # Generate file inventory with BLAKE3 hashes
       echo "Generating file inventory..."
-      find "$CAST_OUTPUT" -type f | while read -r file; do
+      find "$CAST_OUTPUT" \( -type f -o -type l \) | while read -r file; do
         relpath=$(realpath --relative-to="$CAST_OUTPUT" "$file")
         size=$(stat -c%s "$file")
         filehash=$(b3sum "$file" | cut -d' ' -f1)
-        executable=$(if [ -x "$file" ]; then echo "true"; else echo "false"; fi)
+
+        # Check if file is executable
+        if [ -x "$file" ]; then
+          exec_flag="true"
+        else
+          exec_flag="false"
+        fi
 
         jq -n \
           --arg path "$relpath" \
           --arg hash "blake3:$filehash" \
           --arg size "$size" \
-          --argjson exec "$executable" \
-          '{path: $path, hash: $hash, size: ($size | tonumber), executable: $exec}'
+          --arg exec "$exec_flag" \
+          '{path: $path, hash: $hash, size: ($size | tonumber), executable: ($exec == "true")}'
       done | jq -s '.' > "$out/contents.json"
 
       # Generate transformation provenance
       jq -n \
         --arg type "${name}" \
         --arg from "${sourceHash}" \
-        --argjson params '$CAST_TRANSFORM_PARAMS' \
+        --argjson params "$CAST_TRANSFORM_PARAMS" \
         '{type: $type, from: $from, params: $params}' \
         > "$out/transformation.json"
 
       # Build transformations array (preserve existing + add new)
-      if [ -n "${
-        if sourceManifest != null
-        then "true"
-        else ""
-      }" ]; then
+      # Read source manifest at build time to support chained transformations
+      if [ -f "$src/manifest.json" ]; then
+        echo "Preserving transformation chain from source manifest"
         # Source has manifest, extend its transformations
-        echo '${builtins.toJSON sourceManifest}' | \
-          jq --slurpfile new_transform "$out/transformation.json" \
-             '.transformations += $new_transform' | \
-          jq '.transformations' > "$out/transformations.json"
+        # Append new transformation to the array
+        jq --slurpfile new_transform "$out/transformation.json" \
+           '.transformations += $new_transform' \
+           < "$src/manifest.json" | \
+        jq '.transformations' > "$out/transformations.json"
       else
+        echo "Starting new transformation chain"
         # No source manifest, start fresh
         jq -s '.' "$out/transformation.json" > "$out/transformations.json"
       fi
@@ -190,14 +196,10 @@
       transformationType = name;
       inherit sourceHash;
       manifestPath = "$out/manifest.json";
+      manifest = "$out/manifest.json";
+      manifestData = sourceManifest;
     };
   };
-
-  # Import mkDataset for creating final dataset derivation
-  mkDataset = import ./mkDataset.nix {inherit lib pkgs;};
 in
-  # Return a dataset derivation using mkDataset
-  mkDataset {
-    inherit name version;
-    manifest = "${transformedData}/manifest.json";
-  }
+  # Return the transformed dataset directly
+  transformedData

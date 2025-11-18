@@ -20,12 +20,36 @@
     packages.${system} = {
       # Example 1: Simple file copy transformation
       example-copy = let
-        # Create source dataset
-        sourceDataset = cast.lib.mkDataset {
+        # Create simple source dataset with actual files (not CAS)
+        sourceDataset = pkgs.stdenv.mkDerivation {
           name = "source-data";
           version = "1.0.0";
-          manifest = ./source-manifest.json;
-          storePath = "/tmp/cast-transform-test";
+
+          dontUnpack = true;
+          dontBuild = true;
+
+          installPhase = ''
+            mkdir -p $out/data
+            echo "hello world!" > $out/data/hello.txt
+            echo "world" > $out/data/world.txt
+
+            # Create a simple manifest
+            cat > $out/manifest.json <<'EOF'
+            {
+              "schema_version": "1.0",
+              "dataset": {
+                "name": "source-data",
+                "version": "1.0.0",
+                "description": "Simple test dataset"
+              },
+              "source": {
+                "url": "generated://test-data"
+              },
+              "contents": [],
+              "transformations": []
+            }
+            EOF
+          '';
         };
       in
         cast.lib.transform {
@@ -42,11 +66,29 @@
 
       # Example 2: Text transformation (uppercase)
       example-uppercase = let
-        sourceDataset = cast.lib.mkDataset {
+        # Create simple source dataset with actual files
+        sourceDataset = pkgs.stdenv.mkDerivation {
           name = "source-data";
           version = "1.0.0";
-          manifest = ./source-manifest.json;
-          storePath = "/tmp/cast-transform-test";
+
+          dontUnpack = true;
+          dontBuild = true;
+
+          installPhase = ''
+            mkdir -p $out/data
+            echo "hello world!" > $out/data/hello.txt
+            echo "world" > $out/data/world.txt
+
+            cat > $out/manifest.json <<'EOF'
+            {
+              "schema_version": "1.0",
+              "dataset": {"name": "source-data", "version": "1.0.0"},
+              "source": {"url": "generated://test"},
+              "contents": [],
+              "transformations": []
+            }
+            EOF
+          '';
         };
       in
         cast.lib.transform {

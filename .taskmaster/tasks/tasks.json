@@ -347,7 +347,7 @@
         "dependencies": [
           8
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -410,7 +410,7 @@
               5
             ],
             "details": "examples/transformation/에 여러 변환 예제를 구현합니다. tar.gz 해제, CSV to JSON 변환, 이미지 리사이징 등 실제 사용 케이스를 테스트합니다. 각 예제에서 캐싱이 작동하고, provenance가 기록되며, 심링크 팜이 올바르게 생성되는지 확인합니다.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "각 변환 예제가 nix build로 성공하는지 테스트, 변환 결과 파일의 내용 검증, 캐시 히트율 측정"
           }
         ]
@@ -432,7 +432,7 @@
     ],
     "metadata": {
       "created": "2025-11-17T15:10:33.104Z",
-      "updated": "2025-11-18T01:58:47.473Z",
+      "updated": "2025-11-18T02:13:17.013Z",
       "description": "Tasks for master context"
     }
   }
