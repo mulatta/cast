@@ -292,9 +292,17 @@
           };
         };
 
+        # flake-parts modules for CAST configuration
+        flakeModules = {
+          default = import ./lib/flake-module.nix;
+          cast = import ./lib/flake-module.nix;
+        };
+
         # NixOS module for system-wide CAST database management
-        nixosModules.cast = import ./modules/cast.nix;
-        nixosModules.default = import ./modules/cast.nix;
+        nixosModules = {
+          default = import ./modules/cast.nix;
+          cast = import ./modules/cast.nix;
+        };
       };
     };
 

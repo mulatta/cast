@@ -31,22 +31,46 @@
       throw ''
         CAST storePath not configured.
 
-        Please configure storePath in your flake.nix using one of these methods:
+        Please use CAST's flakeModule to configure storePath:
 
-        Method 1: flake-parts options (recommended)
-          options.cast = lib.mkOption {
-            type = lib.types.submodule {
-              options.storePath = lib.mkOption { type = lib.types.path; };
-            };
+        {
+          inputs = {
+            nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+            flake-parts.url = "github:hercules-ci/flake-parts";
+            cast.url = "github:yourusername/cast";
           };
-          config.cast.storePath = "/data/cast-store";
 
-        Method 2: Pass explicit parameter
+          outputs = inputs@{ flake-parts, ... }:
+            flake-parts.lib.mkFlake { inherit inputs; } {
+              # Import CAST flakeModule
+              imports = [ inputs.cast.flakeModules.default ];
+
+              systems = [ "x86_64-linux" ];
+
+              perSystem = { castLib, ... }: {
+                # Configure CAST storage path
+                cast.storePath = "/data/cast-store";
+
+                # castLib is automatically injected and configured
+                packages.my-database = castLib.mkDataset {
+                  name = "my-db";
+                  version = "1.0.0";
+                  manifest = ./manifest.json;
+                };
+              };
+            };
+        }
+
+        Alternative: Pass explicit storePath parameter
           castLib.mkDataset {
-            storePath = "/data/cast-store";
-            name = "...";
-            manifest = ...;
+            name = "my-db";
+            version = "1.0.0";
+            manifest = ./manifest.json;
+            storePath = "/data/cast-store";  # Override configured path
           }
+
+        Note: CAST requires flake-parts for the flakeModules pattern.
+        See: https://github.com/yourusername/cast#configuration
       '';
 
   # Generate dataset environment variable name

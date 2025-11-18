@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    flake-parts.url = "github:hercules-ci/flake-parts";
     systems.url = "github:nix-systems/default";
     cast = {
       url = "path:../..";
@@ -10,57 +11,50 @@
     };
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    cast,
-    systems,
-    ...
-  }: let
-    forAllSystems = f:
-      nixpkgs.lib.genAttrs (import systems) (system:
-        f {
-          inherit system;
-          pkgs = nixpkgs.legacyPackages.${system};
-        });
-  in {
-    packages = forAllSystems (_: let
-      # CAST configuration with explicit storePath
-      # For production, use flake-parts options instead (see database-registry example)
-      castLib = cast.lib.configure {
-        storePath = builtins.getEnv "HOME" + "/.cache/cast";
-      };
-    in rec {
-      # Example dataset using pre-existing manifest
-      example-dataset = castLib.mkDataset {
-        name = "simple-example";
-        version = "1.0.0";
-        manifest = ./manifest.json;
-      };
+  outputs = inputs @ {flake-parts, ...}:
+    flake-parts.lib.mkFlake {inherit inputs;} {
+      systems = import inputs.systems;
 
-      # Default package
-      default = example-dataset;
-    });
+      # Import CAST flakeModule for automatic castLib injection
+      imports = [inputs.cast.flakeModules.default];
 
-    # Dev shell with the dataset available
-    devShells = forAllSystems ({
-      system,
-      pkgs,
-    }: {
-      default = pkgs.mkShell {
-        buildInputs = [
-          self.packages.${system}.example-dataset
-        ];
+      perSystem = {
+        config,
+        pkgs,
+        castLib, # Automatically injected by CAST flakeModule
+        ...
+      }: {
+        # Configure CAST storage path (per-system)
+        cast.storePath = builtins.getEnv "HOME" + "/.cache/cast";
 
-        shellHook = ''
-          echo "Simple example dataset loaded!"
-          echo "Dataset path: $CAST_DATASET_SIMPLE_EXAMPLE"
-          echo "Manifest: $CAST_DATASET_SIMPLE_EXAMPLE_MANIFEST"
-          echo ""
-          echo "Available files:"
-          ls -lh "$CAST_DATASET_SIMPLE_EXAMPLE"
-        '';
+        packages = rec {
+          # Example dataset using pre-existing manifest
+          # castLib is automatically configured with cast.storePath
+          example-dataset = castLib.mkDataset {
+            name = "simple-example";
+            version = "1.0.0";
+            manifest = ./manifest.json;
+          };
+
+          # Default package
+          default = example-dataset;
+        };
+
+        # Dev shell with the dataset available
+        devShells.default = pkgs.mkShell {
+          buildInputs = [
+            config.packages.example-dataset
+          ];
+
+          shellHook = ''
+            echo "Simple example dataset loaded!"
+            echo "Dataset path: $CAST_DATASET_SIMPLE_EXAMPLE"
+            echo "Manifest: $CAST_DATASET_SIMPLE_EXAMPLE_MANIFEST"
+            echo ""
+            echo "Available files:"
+            ls -lh "$CAST_DATASET_SIMPLE_EXAMPLE"
+          '';
+        };
       };
-    });
-  };
+    };
 }
