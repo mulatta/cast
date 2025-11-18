@@ -155,7 +155,7 @@
               5
             ],
             "details": "lib/types.nix에서 lib.types를 사용하여 manifest, dataset, transformation 등의 타입을 정의합니다. flake.nix의 checks 속성에 각 라이브러리 함수의 평가 테스트와 통합 테스트를 추가하여 nix flake check로 모든 테스트를 실행할 수 있도록 합니다.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "타입 체크 테스트, 각 함수의 파라미터 검증, 통합 시나리오 테스트, CI에서 자동 실행 가능성 확인"
           }
         ]
@@ -432,7 +432,7 @@
     ],
     "metadata": {
       "created": "2025-11-17T15:10:33.104Z",
-      "updated": "2025-11-18T01:05:55.050Z",
+      "updated": "2025-11-18T01:09:05.739Z",
       "description": "Tasks for master context"
     }
   }
