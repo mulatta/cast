@@ -18,34 +18,33 @@
     pkgs = nixpkgs.legacyPackages.${system};
   in {
     packages.${system} = {
-      # Example dataset using mkDataset
+      # Example dataset using pre-existing manifest
       example-dataset = cast.lib.mkDataset {
-        name = "example-dataset";
-        version = "2024-01-01";
-        manifest = ./test-manifest.json;
-        # Use a temporary store path for testing
-        storePath = "/tmp/cast-test-store";
+        name = "simple-example";
+        version = "1.0.0";
+        manifest = ./manifest.json;
+        # Use CAST_STORE environment variable (requires --impure flag)
+        # Example: CAST_STORE=$HOME/.cache/cast nix build --impure .#example-dataset
+        storePath = null; # Will use CAST_STORE env var or default
       };
 
       # Default package
       default = self.packages.${system}.example-dataset;
     };
 
-    # Development shell showing environment variable usage
+    # Dev shell with the dataset available
     devShells.${system}.default = pkgs.mkShell {
-      name = "cast-example-shell";
-      buildInputs = [self.packages.${system}.example-dataset];
+      buildInputs = [
+        self.packages.${system}.example-dataset
+      ];
 
       shellHook = ''
-        echo "CAST Dataset Example Shell"
-        echo "============================"
-        if [ -n "$CAST_DATASET_EXAMPLE_DATASET" ]; then
-          echo "✓ CAST_DATASET_EXAMPLE_DATASET = $CAST_DATASET_EXAMPLE_DATASET"
-          echo "✓ CAST_DATASET_EXAMPLE_DATASET_VERSION = $CAST_DATASET_EXAMPLE_DATASET_VERSION"
-          echo "✓ CAST_DATASET_EXAMPLE_DATASET_MANIFEST = $CAST_DATASET_EXAMPLE_DATASET_MANIFEST"
-        else
-          echo "✗ Environment variables not set"
-        fi
+        echo "Simple example dataset loaded!"
+        echo "Dataset path: $CAST_DATASET_SIMPLE_EXAMPLE"
+        echo "Manifest: $CAST_DATASET_SIMPLE_EXAMPLE_MANIFEST"
+        echo ""
+        echo "Available files:"
+        ls -lh "$CAST_DATASET_SIMPLE_EXAMPLE"
       '';
     };
   };

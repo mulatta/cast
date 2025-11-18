@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "dataset": {
+    "name": "simple-example",
+    "version": "1.0.0",
+    "description": "Simple example dataset with text and CSV files"
+  },
+  "source": {
+    "url": "file:///examples/simple-dataset/data",
+    "download_date": "2024-01-01T00:00:00Z",
+    "server_mtime": "2024-01-01T00:00:00Z",
+    "archive_hash": "blake3:0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "contents": [
+    {
+      "path": "sample.txt",
+      "hash": "blake3:7a090e90e50dfc028aa09c1ffbc85f108a5b3cc2a1a56289b5ab1a9301b59e88",
+      "size": 25,
+      "executable": false
+    },
+    {
+      "path": "users.csv",
+      "hash": "blake3:0fa9b6b6c7c01285fb8b4d6e817c9ce14d78c26234d8716425e8bc5adc073f00",
+      "size": 68,
+      "executable": false
+    }
+  ],
+  "transformations": []
+}
