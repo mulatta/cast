@@ -1,22 +1,44 @@
 // Storage backend trait and implementations
-// This will be fully implemented in task 6
+pub mod config;
+pub mod local;
 
 use anyhow::Result;
+use async_trait::async_trait;
 use std::path::PathBuf;
 
-/// Storage backend trait for CAS operations
+use crate::hash::Blake3Hash;
+use crate::manifest::Manifest;
+
+/// Storage backend trait for content-addressed storage operations
+///
+/// All methods are async to support various backend types (local, remote, etc.)
+#[async_trait]
 pub trait StorageBackend: Send + Sync {
     /// Store data and return its BLAKE3 hash
-    fn put(&self, data: &[u8]) -> Result<String>;
+    ///
+    /// The data is read from the provided reader, hashed, and stored
+    /// in the content-addressed storage. Returns the hash for retrieval.
+    async fn put(&self, data: &[u8]) -> Result<Blake3Hash>;
 
-    /// Retrieve path to data by hash
-    fn get(&self, hash: &str) -> Result<PathBuf>;
+    /// Retrieve file path by hash
+    ///
+    /// Returns the path to the file in CAS. The file may be a symlink
+    /// to the actual storage location.
+    async fn get(&self, hash: &Blake3Hash) -> Result<PathBuf>;
 
     /// Check if hash exists in storage
-    fn exists(&self, hash: &str) -> bool;
+    async fn exists(&self, hash: &Blake3Hash) -> bool;
 
-    /// Delete data by hash (respects reference counting)
-    fn delete(&self, hash: &str) -> Result<()>;
+    /// Delete data by hash
+    ///
+    /// Note: This should respect reference counting in production.
+    /// For now, it directly removes the file.
+    async fn delete(&self, hash: &Blake3Hash) -> Result<()>;
+
+    /// Register a dataset manifest
+    ///
+    /// This will be used with the metadata database in Task 7
+    async fn register_dataset(&self, manifest: &Manifest) -> Result<()>;
 }
 
-// Local storage implementation will be added in task 6
+pub use config::StorageConfig;
