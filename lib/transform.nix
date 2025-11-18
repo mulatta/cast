@@ -47,13 +47,12 @@
       findutils
     ];
 
-    # Set CAST_OUTPUT for builder to use
-    CAST_OUTPUT = "$out/data";
+    # Environment variables for transformation
     CAST_TRANSFORM_NAME = name;
     CAST_TRANSFORM_PARAMS = builtins.toJSON params;
 
-    # Use custom builder or default build phase
-    builder =
+    # Store builder script for use in buildPhase
+    builderScript =
       if builtins.isPath builder || builtins.isString builder
       then builder
       else pkgs.writeScript "transform-${name}.sh" builder;
@@ -85,6 +84,9 @@
     buildPhase = ''
       runHook preBuild
 
+      # Set CAST_OUTPUT for builder to use
+      export CAST_OUTPUT="$out/data"
+
       echo "Running transformation: ${name}"
       echo "CAST_OUTPUT: $CAST_OUTPUT"
       echo "SOURCE_DATA: $SOURCE_DATA"
@@ -94,11 +96,11 @@
 
       # Execute the transformation builder
       # Builder should write outputs to $CAST_OUTPUT
-      if [ -f "$builder" ]; then
-        chmod +x "$builder"
-        "$builder"
+      if [ -f "$builderScript" ]; then
+        chmod +x "$builderScript"
+        "$builderScript"
       else
-        eval "$builder"
+        eval "$builderScript"
       fi
 
       runHook postBuild

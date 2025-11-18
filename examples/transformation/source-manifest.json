@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "dataset": {
+    "name": "source-data",
+    "version": "1.0.0",
+    "description": "Example source dataset for transformations"
+  },
+  "source": {
+    "url": "file:///examples/transformation/test-data",
+    "download_date": "2024-01-01T00:00:00Z",
+    "server_mtime": "2024-01-01T00:00:00Z",
+    "archive_hash": "blake3:0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "contents": [
+    {
+      "path": "hello.txt",
+      "hash": "blake3:d74981efa70a0c880b8d8c1985d075dbcbf679b99a5f9914e5aaf96b831a9e24",
+      "size": 12,
+      "executable": false
+    },
+    {
+      "path": "world.txt",
+      "hash": "blake3:7a38bf81f383f69433ad6e900d35b3e2385593f76a7b7ab5d4355b8ba41ee24b",
+      "size": 6,
+      "executable": false
+    }
+  ],
+  "transformations": []
+}

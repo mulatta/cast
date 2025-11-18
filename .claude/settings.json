@@ -42,6 +42,8 @@
       "Bash(jj op undo:*)",
       "Bash(jj op restore:*)",
 
+      "Bash(cargo:*)",
+
       "Bash(git:*)",
       "Bash(find:*)",
       "Bash(grep:*)",
