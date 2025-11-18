@@ -125,6 +125,150 @@
                 '';
           };
 
+          # flakeModules tests
+          flakeModuleTests = {
+            # Test that flakeModules are exported
+            flakeModule-exports = pkgs.runCommand "test-flakeModule-exports" {} ''
+              # Test that both exports exist
+              ${pkgs.nix}/bin/nix eval --no-warn-dirty --impure --expr '
+                let
+                  flake = builtins.getFlake "${inputs.self}";
+                in
+                  assert flake.flakeModules ? default;
+                  assert flake.flakeModules ? cast;
+                  assert flake.flakeModules.default == flake.flakeModules.cast;
+                  "ok"
+              '
+              echo "flakeModules exported correctly" > $out
+            '';
+
+            # Test that castLib is injected when flakeModule is imported
+            flakeModule-castLib-injection = pkgs.runCommand "test-castLib-injection" {
+              buildInputs = [ pkgs.nix ];
+            } ''
+              # Create a test flake that imports the CAST flakeModule
+              mkdir -p test-flake
+              cd test-flake
+
+              cat > flake.nix << 'EOF'
+              {
+                inputs = {
+                  nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+                  flake-parts.url = "github:hercules-ci/flake-parts";
+                  systems.url = "github:nix-systems/default";
+                  cast.url = "${inputs.self}";
+                };
+
+                outputs = inputs @ { flake-parts, ... }:
+                  flake-parts.lib.mkFlake { inherit inputs; } {
+                    systems = import inputs.systems;
+                    imports = [ inputs.cast.flakeModules.default ];
+
+                    perSystem = { castLib, ... }: {
+                      cast.storePath = "/tmp/test";
+
+                      # Test that castLib has expected functions
+                      _test = {
+                        hasMkDataset = builtins.isFunction castLib.mkDataset;
+                        hasTransform = builtins.isFunction castLib.transform;
+                        hasSymlinkSubset = builtins.isFunction castLib.symlinkSubset;
+                      };
+                    };
+                  };
+              }
+              EOF
+
+              # Evaluate the test
+              ${pkgs.nix}/bin/nix eval --no-warn-dirty --impure .#_test.x86_64-linux.hasMkDataset
+              ${pkgs.nix}/bin/nix eval --no-warn-dirty --impure .#_test.x86_64-linux.hasTransform
+              ${pkgs.nix}/bin/nix eval --no-warn-dirty --impure .#_test.x86_64-linux.hasSymlinkSubset
+
+              echo "castLib injection test passed" > $out
+            '';
+
+            # Test that cast.storePath option exists and works
+            flakeModule-storePath-option = pkgs.runCommand "test-storePath-option" {
+              buildInputs = [ pkgs.nix ];
+            } ''
+              mkdir -p test-flake
+              cd test-flake
+
+              cat > flake.nix << 'EOF'
+              {
+                inputs = {
+                  nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+                  flake-parts.url = "github:hercules-ci/flake-parts";
+                  systems.url = "github:nix-systems/default";
+                  cast.url = "${inputs.self}";
+                };
+
+                outputs = inputs @ { flake-parts, ... }:
+                  flake-parts.lib.mkFlake { inherit inputs; } {
+                    systems = import inputs.systems;
+                    imports = [ inputs.cast.flakeModules.default ];
+
+                    perSystem = { config, castLib, ... }: {
+                      cast.storePath = "/data/test-store";
+
+                      # Test that storePath is accessible
+                      _storePath = config.cast.storePath;
+                    };
+                  };
+              }
+              EOF
+
+              # Evaluate and check storePath
+              storePath=$(${pkgs.nix}/bin/nix eval --no-warn-dirty --impure --raw .#_storePath.x86_64-linux)
+              if [ "$storePath" != "/data/test-store" ]; then
+                echo "ERROR: Expected /data/test-store, got $storePath"
+                exit 1
+              fi
+
+              echo "storePath option test passed" > $out
+            '';
+
+            # Test examples can be evaluated (not built, just evaluated)
+            flakeModule-example-simple-dataset = pkgs.runCommand "test-example-simple-dataset" {
+              buildInputs = [ pkgs.nix ];
+            } ''
+              cd ${inputs.self}/examples/simple-dataset
+              # Test that the flake evaluates correctly
+              ${pkgs.nix}/bin/nix eval --no-warn-dirty --impure .#packages.x86_64-linux.example-dataset.name
+              echo "simple-dataset example evaluates correctly" > $out
+            '';
+
+            flakeModule-example-transformation = pkgs.runCommand "test-example-transformation" {
+              buildInputs = [ pkgs.nix ];
+            } ''
+              cd ${inputs.self}/examples/transformation
+              # Test that transformation examples evaluate
+              ${pkgs.nix}/bin/nix eval --no-warn-dirty --impure .#packages.x86_64-linux.example-copy.name
+              ${pkgs.nix}/bin/nix eval --no-warn-dirty --impure .#packages.x86_64-linux.example-uppercase.name
+              echo "transformation examples evaluate correctly" > $out
+            '';
+
+            flakeModule-example-registry = pkgs.runCommand "test-example-registry" {
+              buildInputs = [ pkgs.nix ];
+            } ''
+              cd ${inputs.self}/examples/registry
+              # Test that registry with multiple versions evaluates
+              ${pkgs.nix}/bin/nix eval --no-warn-dirty --impure '.#packages.x86_64-linux."test-db-1.0.0".name'
+              ${pkgs.nix}/bin/nix eval --no-warn-dirty --impure '.#packages.x86_64-linux."test-db-2.0.0".name'
+              ${pkgs.nix}/bin/nix eval --no-warn-dirty --impure .#packages.x86_64-linux.test-db-latest.name
+              echo "registry example evaluates correctly" > $out
+            '';
+
+            flakeModule-example-database-registry = pkgs.runCommand "test-example-database-registry" {
+              buildInputs = [ pkgs.nix ];
+            } ''
+              cd ${inputs.self}/examples/database-registry
+              # Test that database registry evaluates
+              ${pkgs.nix}/bin/nix eval --no-warn-dirty --impure .#packages.x86_64-linux.ncbi-nr.name
+              ${pkgs.nix}/bin/nix eval --no-warn-dirty --impure .#packages.x86_64-linux.uniprot.name
+              echo "database-registry example evaluates correctly" > $out
+            '';
+          };
+
           # Integration tests
           integrationTests = {
             # Test mkDataset with attrset manifest
@@ -279,6 +423,7 @@
           // packages
           // devShells
           // libTests
+          // flakeModuleTests
           // integrationTests;
       };
 
