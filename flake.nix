@@ -281,6 +281,72 @@
               ${pkgs.nix}/bin/nix eval --no-warn-dirty --impure .#packages.x86_64-linux.example-all-formats.name
               echo "bioinformatics-transforms example evaluates correctly" > $out
             '';
+
+            # Test NixOS module
+            nixosModule-test = pkgs.runCommand "test-nixos-module" {
+              buildInputs = [ pkgs.nix ];
+            } ''
+              # Test that nixosModules are exported
+              ${pkgs.nix}/bin/nix eval --no-warn-dirty --impure --expr '
+                let
+                  flake = builtins.getFlake "${inputs.self}";
+                in
+                  assert flake.nixosModules ? default;
+                  assert flake.nixosModules ? cast;
+                  assert flake.nixosModules.default == flake.nixosModules.cast;
+                  "ok"
+              '
+
+              # Test that the NixOS module can be imported and evaluated
+              ${pkgs.nix}/bin/nix eval --no-warn-dirty --impure --expr '
+                let
+                  nixpkgs = builtins.getFlake "github:NixOS/nixpkgs/nixos-25.05";
+                  castModule = builtins.getFlake "${inputs.self}";
+
+                  # Create a minimal NixOS configuration with CAST module
+                  config = nixpkgs.lib.nixosSystem {
+                    system = "x86_64-linux";
+                    modules = [
+                      castModule.nixosModules.default
+                      {
+                        services.cast = {
+                          enable = true;
+                          storePath = "/var/lib/cast-test";
+                          databases = {
+                            test-db = {
+                              name = "test-db";
+                              version = "1.0.0";
+                              manifest = {
+                                schema_version = "1.0";
+                                dataset = {
+                                  name = "test-db";
+                                  version = "1.0.0";
+                                };
+                                source = {
+                                  url = "test://";
+                                  archive_hash = "blake3:0000000000000000000000000000000000000000000000000000000000000000";
+                                };
+                                contents = [];
+                              };
+                            };
+                          };
+                        };
+                        # Minimal required config for NixOS
+                        boot.loader.grub.device = "nodev";
+                        fileSystems."/" = { device = "none"; fsType = "tmpfs"; };
+                      }
+                    ];
+                  };
+                in
+                  # Verify options are set correctly
+                  assert config.config.services.cast.enable == true;
+                  assert config.config.services.cast.storePath == "/var/lib/cast-test";
+                  assert config.config.services.cast.databases ? test-db;
+                  "ok"
+              '
+
+              echo "NixOS module tests passed" > $out
+            '';
           };
 
           # Integration tests
