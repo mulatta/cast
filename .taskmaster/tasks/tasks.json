@@ -129,8 +129,8 @@
             "dependencies": [
               2
             ],
-            "details": "lib/transform.nix에서 CAST_OUTPUT 환경변수를 설정하고 사용자 정의 builder 스크립트를 실행합니다. 변환 결과는 cast-cli를 통해 CAS에 저장되며, provenance 체인이 manifest에 기록됩니다. 캐싱 메커니즘도 구현하여 동일한 변환은 재실행하지 않도록 합니다.",
-            "status": "pending",
+            "details": "lib/transform.nix에서 CAST_OUTPUT 환경변수를 설정하고 사용자 정의 builder 스크립트를 실행합니다. 변환 결과는 cast-cli를 통해 CAS에 저장되며, provenance 체인이 manifest에 기록됩니다. 캐싱 메커니즘도 구현하여 동일한 변환은 재실행하지 않도록 합니다.\n<info added on 2025-11-18T00:48:13.251Z>\n구현 완료 내역:\n\nlib/transform.nix 성공적으로 구현됨:\n\n핵심 구현 사항:\n- 소스 처리: CAST 데이터셋이나 임의 소스에서 manifest 읽기, 아카이브와 디렉토리 모두 지원\n- 변환 실행: CAST_OUTPUT, CAST_TRANSFORM_NAME, CAST_TRANSFORM_PARAMS 환경변수 설정, builder(경로 또는 인라인) 실행\n- 출력 처리: 모든 출력 파일에 대한 BLAKE3 해시 생성, 비어있지 않은 출력 검증\n- Provenance 추적: transformations 배열에 변환 타입, 소스 해시, 파라미터 기록, 전체 계보 보존\n- Manifest 생성: dataset, source, contents, transformations(전체 provenance 체인) 포함한 스키마 v1.0\n- mkDataset 통합: 심링크 팜이 포함된 완전한 dataset derivation 반환\n\n주요 기능:\n- Builder 환경: SOURCE_DATA, CAST_OUTPUT, CAST_TRANSFORM_NAME, CAST_TRANSFORM_PARAMS\n- Provenance 체인: 소스의 기존 transformations 배열에 추가\n- 버전 상속: 소스 버전 사용 또는 기본값 \"transformed\"\n- 출력 검증: builder가 출력을 생성하지 않으면 실패\n- 파일 목록: 각 파일에 대한 경로, BLAKE3 해시, 크기, 실행 가능 여부\n\n테스트 결과:\n- 함수 시그니처 확인됨: builder, name, params, src\n- nix flake check: 모든 체크 통과\n- nix fmt: 성공적으로 포맷팅됨\n\n커밋: sxzvkksl c30b28a4\n</info added on 2025-11-18T00:48:13.251Z>",
+            "status": "done",
             "testStrategy": "간단한 변환(파일 복사) 테스트, 복잡한 변환(압축 해제) 테스트, 캐싱 작동 확인"
           },
           {
@@ -432,7 +432,7 @@
     ],
     "metadata": {
       "created": "2025-11-17T15:10:33.104Z",
-      "updated": "2025-11-18T00:26:55.543Z",
+      "updated": "2025-11-18T00:48:13.364Z",
       "description": "Tasks for master context"
     }
   }
