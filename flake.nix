@@ -267,6 +267,20 @@
               ${pkgs.nix}/bin/nix eval --no-warn-dirty --impure .#packages.x86_64-linux.uniprot.name
               echo "database-registry example evaluates correctly" > $out
             '';
+
+            flakeModule-example-bioinformatics-transforms = pkgs.runCommand "test-example-bioinformatics-transforms" {
+              buildInputs = [ pkgs.nix ];
+            } ''
+              cd ${inputs.self}/examples/bioinformatics-transforms
+              # Test that bioinformatics transformation builders evaluate
+              ${pkgs.nix}/bin/nix eval --no-warn-dirty --impure .#packages.x86_64-linux.example-mmseqs.name
+              ${pkgs.nix}/bin/nix eval --no-warn-dirty --impure .#packages.x86_64-linux.example-blast-prot.name
+              ${pkgs.nix}/bin/nix eval --no-warn-dirty --impure .#packages.x86_64-linux.example-diamond.name
+              ${pkgs.nix}/bin/nix eval --no-warn-dirty --impure .#packages.x86_64-linux.example-extract.name
+              ${pkgs.nix}/bin/nix eval --no-warn-dirty --impure .#packages.x86_64-linux.example-pipeline.name
+              ${pkgs.nix}/bin/nix eval --no-warn-dirty --impure .#packages.x86_64-linux.example-all-formats.name
+              echo "bioinformatics-transforms example evaluates correctly" > $out
+            '';
           };
 
           # Integration tests
