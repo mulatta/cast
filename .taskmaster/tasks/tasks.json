@@ -118,8 +118,8 @@
             "dependencies": [
               2
             ],
-            "details": "lib/fetchDatabase.nix에서 curl/wget을 사용하여 데이터를 다운로드하고, cast-cli put 명령으로 CAS에 저장합니다. 아카이브 자동 추출 옵션을 지원하며, 다운로드 메타데이터(URL, 시간, 서버 mtime)를 manifest에 포함시킵니다.",
-            "status": "pending",
+            "details": "lib/fetchDatabase.nix에서 curl/wget을 사용하여 데이터를 다운로드하고, cast-cli put 명령으로 CAS에 저장합니다. 아카이브 자동 추출 옵션을 지원하며, 다운로드 메타데이터(URL, 시간, 서버 mtime)를 manifest에 포함시킵니다.\n<info added on 2025-11-18T00:26:55.446Z>\n성공적으로 lib/fetchDatabase.nix 구현 완료:\n\n핵심 구현 내용:\n- 다운로드: curl 사용하여 리디렉션 추적, 에러 시 실패, 통계 및 Last-Modified 헤더 캡처\n- 해싱: b3sum으로 BLAKE3 해시 계산 및 검증\n- 추출 모드: 아카이브 타입 자동 감지 (tar.gz, tar.bz2, tar.xz, zip, gz), 각 파일별 해시 포함한 전체 파일 인벤토리 생성\n- 비추출 모드: 아카이브를 단일 파일로 저장, 아카이브 해시 사용\n- Manifest 생성: 스키마 v1.0 준수 - dataset, source, contents, transformations 포함\n- mkDataset 통합: 심링크 팜이 포함된 완전한 dataset derivation 반환\n\n주요 기능:\n- 해시 검증: 예상 해시와 실제 해시가 일치하지 않으면 빌드 실패\n- 버전 처리: metadata.version 사용하거나 타임스탬프 기본값 적용\n- 메타데이터 캡처: URL, 다운로드 타임스탬프, 서버 mtime, 아카이브 해시\n- 파일 인벤토리: 각 파일의 경로, BLAKE3 해시, 크기, 실행 권한\n- 포괄적인 아카이브 지원: tar.gz/bz2/xz, zip, plain gz\n\n테스트 결과:\n- 함수 시그니처 확인: extract, hash, metadata, name, url (5개 파라미터)\n- nix flake check: 모든 체크 통과\n- nix fmt: 성공적으로 포맷팅 완료\n\n커밋: tzvzrlmw e3af2d6e\n</info added on 2025-11-18T00:26:55.446Z>",
+            "status": "done",
             "testStrategy": "mock URL로 다운로드 테스트, cast-cli 호출 검증, 생성된 manifest 구조 확인"
           },
           {
@@ -432,7 +432,7 @@
     ],
     "metadata": {
       "created": "2025-11-17T15:10:33.104Z",
-      "updated": "2025-11-17T15:59:34.989Z",
+      "updated": "2025-11-18T00:26:55.543Z",
       "description": "Tasks for master context"
     }
   }
