@@ -427,12 +427,56 @@
           9
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "기본 데이터셋 예제(simple-dataset) 구현",
+            "description": "간단한 테스트 데이터셋을 생성하고 CAST로 등록하는 기본 예제를 구현합니다.",
+            "dependencies": [],
+            "details": "examples/simple-dataset/ 디렉토리에 flake.nix, manifest.json, 샘플 데이터 파일들을 생성합니다. manifest.json에는 테스트 데이터의 메타데이터와 BLAKE3 해시를 포함하고, flake.nix에서는 cast.lib.mkDataset을 사용해 데이터셋을 등록하는 예제를 구현합니다. README.md를 추가하여 예제 사용법을 설명합니다.",
+            "status": "done",
+            "testStrategy": "nix build .#example-dataset으로 빌드 테스트, 생성된 심링크 팜이 올바른지 확인, manifest 검증"
+          },
+          {
+            "id": 2,
+            "title": "변환 파이프라인 및 레지스트리 예제 구현",
+            "description": "실제 데이터베이스를 다운로드하고 변환하는 고급 예제와 다중 버전 관리 레지스트리 예제를 구현합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "examples/transformation/에 NCBI 데이터베이스를 MMseqs 포맷으로 변환하는 예제를 구현합니다. examples/registry/에 여러 버전의 데이터베이스를 관리하는 레지스트리 패턴을 보여주는 예제를 추가합니다. 각 예제에 대한 상세한 README.md와 실행 가능한 스크립트를 포함합니다.",
+            "status": "done",
+            "testStrategy": "각 예제의 nix build 성공 여부, 변환 결과물 검증, 레지스트리 버전 관리 테스트"
+          },
+          {
+            "id": 3,
+            "title": "포괄적인 README.md 및 API 문서 작성",
+            "description": "프로젝트 소개, 설치 가이드, 빠른 시작 튜토리얼, 전체 API 레퍼런스를 포함한 메인 README.md를 작성합니다.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "프로젝트 루트에 README.md를 작성하여 CAST의 목적과 아키텍처를 설명합니다. Nix flake를 통한 설치 방법, cast-cli 바이너리 설치, 환경변수 설정 등을 포함한 상세한 설치 가이드를 제공합니다. 각 cast.lib.* 함수의 파라미터, 반환값, 사용 예제를 포함한 완전한 API 레퍼런스를 작성합니다. docs/ 디렉토리에 아키텍처, 디자인 결정, 기여 가이드라인 등의 추가 문서를 작성합니다.",
+            "status": "pending",
+            "testStrategy": "문서의 모든 코드 스니펫이 실행 가능한지 확인, 설치 가이드를 따라 실제 설치 테스트"
+          },
+          {
+            "id": 4,
+            "title": "CLI 도움말 개선 및 man 페이지 생성",
+            "description": "cast-cli의 --help 출력을 개선하고 포맷된 man 페이지를 생성합니다.",
+            "dependencies": [
+              3
+            ],
+            "details": "Rust clap 라이브러리의 도움말 템플릿을 커스터마이즈하여 더 상세하고 사용자 친화적인 도움말 메시지를 제공합니다. 각 서브커맨드에 대한 예제와 일반적인 사용 패턴을 포함합니다. clap_mangen을 사용하여 man 페이지를 자동 생성하고 Nix derivation에 포함시킵니다. cast(1), cast-put(1), cast-get(1) 등의 섹션별 man 페이지를 제공합니다.",
+            "status": "pending",
+            "testStrategy": "cast-cli --help의 가독성 확인, man cast 명령 작동 테스트, 모든 서브커맨드 도움말 검증"
+          }
+        ]
       }
     ],
     "metadata": {
       "created": "2025-11-17T15:10:33.104Z",
-      "updated": "2025-11-18T02:13:17.013Z",
+      "updated": "2025-11-18T02:26:08.024Z",
       "description": "Tasks for master context"
     }
   }

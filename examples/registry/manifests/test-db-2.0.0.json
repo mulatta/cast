@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "dataset": {
+    "name": "test-db",
+    "version": "2.0.0",
+    "description": "Test database version 2.0.0 - major update"
+  },
+  "source": {
+    "url": "https://example.com/test-db/v2.0.0.tar.gz",
+    "download_date": "2024-03-01T00:00:00Z",
+    "server_mtime": "2024-03-01T00:00:00Z",
+    "archive_hash": "blake3:0000000000000000000000000000000000000000000000000000000000000003"
+  },
+  "contents": [],
+  "transformations": []
+}
