@@ -15,25 +15,21 @@
     flake-parts.lib.mkFlake {inherit inputs;} {
       systems = import inputs.systems;
 
+      # Import CAST flakeModule for automatic castLib injection
+      imports = [inputs.cast.flakeModules.default];
+
       perSystem = {
         config,
         pkgs,
+        castLib, # Automatically injected by CAST flakeModule
         ...
-      }: let
+      }: {
         # ════════════════════════════════════════
         # CAST Configuration
         # ════════════════════════════════════════
-        # Configure CAST with explicit configuration
-        # This demonstrates the pure configuration pattern
-        castConfig = {
-          storePath = "/data/lab-databases";
-          # Note: preferredDownloader will be used in future fetchDatabase implementation
-          preferredDownloader = "aria2c";
-        };
-
-        # Create configured CAST library
-        castLib = inputs.cast.lib.configure castConfig;
-      in {
+        # Configure CAST storage path per-system
+        cast.storePath = "/data/lab-databases";
+        # Note: preferredDownloader will be used in future fetchDatabase implementation
         packages = {
           # Example 1: NCBI NR database
           ncbi-nr = castLib.mkDataset {
@@ -112,8 +108,7 @@
               echo "=== Database Registry Development Shell ==="
               echo ""
               echo "CAST Configuration:"
-              echo "  Storage Path: ${castConfig.storePath}"
-              echo "  Downloader:   ${castConfig.preferredDownloader}"
+              echo "  Storage Path: ${config.cast.storePath}"
               echo ""
               echo "Available Databases:"
               echo "  - NCBI NR:  $CAST_DATASET_NCBI_NR"

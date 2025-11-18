@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    flake-parts.url = "github:hercules-ci/flake-parts";
     systems.url = "github:nix-systems/default";
     cast = {
       url = "path:../..";
@@ -10,27 +11,26 @@
     };
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    cast,
-    systems,
-    ...
-  }: let
-    forAllSystems = f:
-      nixpkgs.lib.genAttrs (import systems) (system:
-        f {
-          inherit system;
-          pkgs = nixpkgs.legacyPackages.${system};
-        });
-  in {
-    packages = forAllSystems ({
-      system,
-      pkgs,
-    }: let
-      # CAST configuration
-      castLib = cast.lib.configure {};
-      packagesAttrs = rec {
+  outputs = inputs @ {flake-parts, ...}:
+    flake-parts.lib.mkFlake {inherit inputs;} {
+      systems = import inputs.systems;
+
+      # Import CAST flakeModule for automatic castLib injection
+      imports = [inputs.cast.flakeModules.default];
+
+      perSystem = {
+        config,
+        pkgs,
+        castLib, # Automatically injected by CAST flakeModule
+        ...
+      }: {
+        # Configure CAST storage path
+        cast.storePath =
+          if builtins.getEnv "CAST_STORE" != ""
+          then builtins.getEnv "CAST_STORE"
+          else "/tmp/cast-transformation";
+
+        packages = rec {
         # Example 1: Simple file copy transformation
         example-copy = let
           # Create simple source dataset with actual files (not CAS)
@@ -123,7 +123,7 @@
         # Example 3: Chained transformations
         example-chain = let
           # First transformation: copy
-          step1 = self.packages.${system}.example-copy;
+          step1 = config.packages.example-copy;
 
           # Second transformation: uppercase the copied files
           step2 = castLib.transform {
@@ -146,7 +146,6 @@
         # Default package
         default = example-copy;
       };
-    in
-      packagesAttrs);
+    };
   };
 }
