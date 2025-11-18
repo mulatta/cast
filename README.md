@@ -1,5 +1,7 @@
 # CAST: Content-Addressed Storage Tool
 
+> **📘 For Claude Code users**: See [`.claude/CLAUDE.md`](.claude/CLAUDE.md) for AI assistant context and instructions.
+
 A Nix-integrated content-addressed storage system for managing large-scale scientific databases with reproducibility and version control.
 
 ## Overview

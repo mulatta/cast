@@ -44,7 +44,6 @@
 
       "Bash(cargo:*)",
 
-      "Bash(git:*)",
       "Bash(find:*)",
       "Bash(grep:*)",
       "Bash(head:*)",
@@ -74,14 +73,33 @@
       "Bash(jj git fetch:*)",
       "Bash(jj bookmark push:*)",
       "Bash(jj bookmark track:*)",
-      "Bash(jj bookmark untrack:*)"
+      "Bash(jj bookmark untrack:*)",
+
+      "Bash(git commit:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(git fetch:*)",
+      "Bash(git merge:*)",
+      "Bash(git rebase:*)",
+      "Bash(git reset:*)",
+      "Bash(git checkout:*)",
+      "Bash(git branch:*)",
+      "Bash(git stash:*)"
     ],
     "ask": [
       "Bash(jj git clone:*)",
       "Bash(jj git remote:*)",
       "Bash(jj bookmark create:*)",
       "Bash(jj bookmark delete:*)",
-      "Bash(jj bookmark rename:*)"
+      "Bash(jj bookmark rename:*)",
+
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git diff:*)",
+      "Bash(git remote:*)",
+      "Bash(git config:*)"
     ]
   },
   "mcpServer": {

@@ -12,12 +12,7 @@
 in {
   options = {
     # Per-system CAST configuration
-    perSystem = mkPerSystemOption ({
-      config,
-      pkgs,
-      system,
-      ...
-    }: {
+    perSystem = mkPerSystemOption (_: {
       options.cast = mkOption {
         type = types.submodule {
           options = {
@@ -70,7 +65,7 @@ in {
       lib.mkIf hasStorePath {
         # Inject configured castLib into perSystem module args
         _module.args.castLib = castLibFunctions.configure {
-          storePath = config.cast.storePath;
+          inherit (config.cast) storePath;
         };
       };
   };

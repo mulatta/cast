@@ -34,7 +34,6 @@
           # ══════════════════════════════════════════════════════════════
           # Sample FASTA Dataset
           # ══════════════════════════════════════════════════════════════
-
           # Create a sample protein FASTA dataset for demonstration
           sampleFastaDataset = pkgs.stdenv.mkDerivation {
             name = "sample-proteins";
