@@ -29,14 +29,18 @@ flake 입력으로 CAST를 추가합니다:
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    flake-parts.url = "github:hercules-ci/flake-parts";
     cast.url = "github:yourusername/cast";
   };
 
-  outputs = { self, nixpkgs, cast }: {
-    # 여기에 패키지 정의
-  };
+  outputs = inputs@{ flake-parts, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      # CAST 설정은 아래 "기본 사용법" 참조
+    };
 }
 ```
+
+**참고**: CAST는 flake-parts를 사용하여 깔끔한 설정을 제공합니다.
 
 CLI 도구 빌드:
 
@@ -47,27 +51,42 @@ nix build github:yourusername/cast#cast-cli
 
 ### 기본 사용법
 
-1. **flake에서 CAST 라이브러리 설정**:
+1. **CAST flakeModule import 및 설정**:
 
 ```nix
 {
-  outputs = { self, nixpkgs, cast }: let
-    # 명시적인 저장소 경로로 CAST 설정
-    castLib = cast.lib.configure {
-      storePath = "/data/lab-databases";
-    };
-  in {
-    packages.x86_64-linux = {
-      # 설정된 라이브러리 사용
-      my-dataset = castLib.mkDataset {
-        name = "my-dataset";
-        version = "1.0.0";
-        manifest = ./my-dataset-manifest.json;
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    cast.url = "github:yourusername/cast";
+  };
+
+  outputs = inputs@{ flake-parts, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      systems = [ "x86_64-linux" ];
+
+      # CAST flakeModule import
+      imports = [ inputs.cast.flakeModules.default ];
+
+      perSystem = { castLib, ... }: {
+        # CAST 저장소 경로 설정
+        cast.storePath = "/data/lab-databases";
+
+        # castLib이 자동으로 주입되어 사용 가능
+        packages.my-dataset = castLib.mkDataset {
+          name = "my-dataset";
+          version = "1.0.0";
+          manifest = ./my-dataset-manifest.json;
+        };
       };
     };
-  };
 }
 ```
+
+**핵심 포인트**:
+- `imports = [ inputs.cast.flakeModules.default ]` - CAST 모듈 활성화
+- `cast.storePath` - 데이터 저장 위치 설정
+- `castLib` - perSystem에 자동 주입됨 (별도 설정 불필요)
 
 2. **데이터셋 매니페스트 생성** (`my-dataset-manifest.json`):
 
@@ -112,12 +131,13 @@ cat result/data/data.txt
 ┌─────────────────────────────────────┐
 │ 사용자 프로젝트                      │
 │  - Flake 입력 (데이터베이스 의존성) │
-│  - 순수 설정                         │
+│  - flakeModules import               │
+│  - 순수 설정 (cast.storePath)       │
 └─────────────────────────────────────┘
                 ↓
 ┌─────────────────────────────────────┐
 │ CAST 라이브러리 (lib/*.nix)         │
-│  - configure                         │
+│  - flake-module.nix (자동 주입)     │
 │  - mkDataset                         │
 │  - transform                         │
 │  - fetchDatabase (향후)             │
@@ -150,44 +170,60 @@ cat result/data/data.txt
 
 ## API 참조
 
-### `cast.lib.configure`
+### CAST flakeModule 설정
 
-설정된 CAST 라이브러리 인스턴스를 생성합니다.
+CAST는 flake-parts 모듈을 제공하여 자동 설정 및 `castLib` 주입을 지원합니다.
 
-```nix
-castLib = cast.lib.configure {
-  storePath = "/data/cast-store";  # 필수: 데이터 저장 위치
-  # 향후 옵션:
-  # preferredDownloader = "aria2c";
-  # compressionLevel = 9;
-}
-```
-
-**매개변수**:
-- `storePath` (문자열, 필수): CAST 저장소 디렉토리 경로
-
-**반환값**: 모든 CAST 함수를 포함한 설정된 라이브러리 인스턴스
-
-**flake-parts 사용 예제**:
+**기본 설정**:
 
 ```nix
 {
-  inputs.cast.url = "github:yourusername/cast";
-  inputs.flake-parts.url = "github:hercules-ci/flake-parts";
+  imports = [ inputs.cast.flakeModules.default ];
 
-  outputs = inputs @ {flake-parts, ...}:
-    flake-parts.lib.mkFlake {inherit inputs;} {
-      perSystem = {config, pkgs, ...}: let
-        castLib = inputs.cast.lib.configure {
-          storePath = "/data/lab-databases";
-        };
-      in {
-        packages = {
-          ncbi-nr = castLib.mkDataset {...};
-          uniprot = castLib.mkDataset {...};
-        };
-      };
+  perSystem = { castLib, ... }: {
+    # CAST 저장소 경로 설정
+    cast.storePath = "/data/cast-store";
+
+    # castLib이 자동으로 주입되어 사용 가능
+    packages.my-db = castLib.mkDataset {...};
+  };
+}
+```
+
+**설정 옵션**:
+- `cast.storePath` (경로, 필수): CAST 저장소 디렉토리 경로
+
+**자동 제공**:
+- `castLib` - perSystem에 자동 주입되는 설정된 라이브러리 인스턴스
+
+**시스템별 설정 예제**:
+
+```nix
+{
+  imports = [ inputs.cast.flakeModules.default ];
+
+  perSystem = { system, castLib, ... }: {
+    # 시스템별로 다른 저장소 경로 사용
+    cast.storePath =
+      if system == "x86_64-linux"
+      then "/fast/nvme/cast"    # SSD
+      else "/bulk/hdd/cast";    # HDD
+
+    packages = {
+      ncbi-nr = castLib.mkDataset {...};
+      uniprot = castLib.mkDataset {...};
     };
+  };
+}
+```
+
+**환경 변수 기반 설정**:
+
+```nix
+perSystem = { castLib, ... }: {
+  cast.storePath = builtins.getEnv "HOME" + "/.cache/cast";
+
+  packages.my-db = castLib.mkDataset {...};
 }
 ```
 
@@ -218,18 +254,23 @@ castLib.mkDataset {
 **예제**:
 
 ```nix
-let
-  castLib = cast.lib.configure {storePath = "/data/cast";};
+{
+  imports = [ inputs.cast.flakeModules.default ];
 
-  ncbiNr = castLib.mkDataset {
-    name = "ncbi-nr";
-    version = "2024-01-15";
-    manifest = ./ncbi-nr-manifest.json;
+  perSystem = { castLib, pkgs, config, ... }: {
+    cast.storePath = "/data/cast";
+
+    packages.ncbi-nr = castLib.mkDataset {
+      name = "ncbi-nr";
+      version = "2024-01-15";
+      manifest = ./ncbi-nr-manifest.json;
+    };
+
+    devShells.default = pkgs.mkShell {
+      buildInputs = [ config.packages.ncbi-nr ];
+      # $CAST_DATASET_NCBI_NR이 이제 데이터셋을 가리킴
+    };
   };
-in
-pkgs.mkShell {
-  buildInputs = [ ncbiNr ];
-  # $CAST_DATASET_NCBI_NR이 이제 데이터셋을 가리킴
 }
 ```
 
@@ -263,22 +304,28 @@ castLib.transform {
 **예제 - FASTA를 MMseqs2로 변환**:
 
 ```nix
-let
-  castLib = cast.lib.configure {storePath = "/data/cast";};
+{
+  imports = [ inputs.cast.flakeModules.default ];
 
-  rawFasta = castLib.mkDataset {...};
+  perSystem = { castLib, pkgs, config, ... }: {
+    cast.storePath = "/data/cast";
 
-  mmseqsDb = castLib.transform {
-    name = "to-mmseqs";
-    src = rawFasta;
+    packages = {
+      raw-fasta = castLib.mkDataset {...};
 
-    builder = ''
-      ${pkgs.mmseqs2}/bin/mmseqs createdb \
-        "$SOURCE_DATA/sequences.fasta" \
-        "$CAST_OUTPUT/mmseqs_db"
-    '';
+      mmseqs-db = castLib.transform {
+        name = "to-mmseqs";
+        src = config.packages.raw-fasta;
+
+        builder = ''
+          ${pkgs.mmseqs2}/bin/mmseqs createdb \
+            "$SOURCE_DATA/sequences.fasta" \
+            "$CAST_OUTPUT/mmseqs_db"
+        '';
+      };
+    };
   };
-in mmseqsDb
+}
 ```
 
 ### `cast.lib.symlinkSubset`
@@ -321,15 +368,17 @@ nix build .#example-dataset  # 순수 평가!
 
 **핵심 패턴**:
 ```nix
-let
-  castLib = cast.lib.configure {
-    storePath = builtins.getEnv "HOME" + "/.cache/cast";
-  };
-in {
-  example-dataset = castLib.mkDataset {
-    name = "simple-example";
-    version = "1.0.0";
-    manifest = ./manifest.json;
+{
+  imports = [ inputs.cast.flakeModules.default ];
+
+  perSystem = { castLib, ... }: {
+    cast.storePath = builtins.getEnv "HOME" + "/.cache/cast";
+
+    packages.example-dataset = castLib.mkDataset {
+      name = "simple-example";
+      version = "1.0.0";
+      manifest = ./manifest.json;
+    };
   };
 }
 ```
@@ -353,17 +402,38 @@ cat result/manifest.json | jq '.transformations'
 다중 버전 데이터베이스 관리는 [`examples/registry/`](examples/registry/)를 참조하세요:
 
 ```nix
-databases = {
-  test-db = {
-    "1.0.0" = castLib.mkDataset {...};
-    "1.1.0" = castLib.mkDataset {...};
-    "2.0.0" = castLib.mkDataset {...};
-  };
-};
+{
+  imports = [ inputs.cast.flakeModules.default ];
 
-# 특정 버전 사용
-packages.test-db-latest = databases.test-db."2.0.0";
-packages.test-db-stable = databases.test-db."1.1.0";
+  perSystem = { castLib, ... }: {
+    cast.storePath = builtins.getEnv "HOME" + "/.cache/cast";
+
+    packages = let
+      test-db-versions = {
+        "test-db-1.0.0" = castLib.mkDataset {
+          name = "test-db";
+          version = "1.0.0";
+          manifest = ./manifests/test-db-1.0.0.json;
+        };
+        "test-db-1.1.0" = castLib.mkDataset {
+          name = "test-db";
+          version = "1.1.0";
+          manifest = ./manifests/test-db-1.1.0.json;
+        };
+        "test-db-2.0.0" = castLib.mkDataset {
+          name = "test-db";
+          version = "2.0.0";
+          manifest = ./manifests/test-db-2.0.0.json;
+        };
+      };
+    in
+      test-db-versions // {
+        # 편의를 위한 별칭
+        test-db-latest = test-db-versions."test-db-2.0.0";
+        test-db-stable = test-db-versions."test-db-1.1.0";
+      };
+  };
+}
 ```
 
 ```bash
@@ -378,25 +448,45 @@ nix develop .#legacy  # 이전 버전 사용
 
 ```nix
 {
-  inputs.flake-parts.url = "github:hercules-ci/flake-parts";
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    cast.url = "github:yourusername/cast";
+  };
 
   outputs = inputs @ {flake-parts, ...}:
     flake-parts.lib.mkFlake {inherit inputs;} {
-      perSystem = {config, ...}: let
-        castConfig = {
-          storePath = "/data/lab-databases";
-          preferredDownloader = "aria2c";
-        };
-        castLib = inputs.cast.lib.configure castConfig;
-      in {
+      systems = import inputs.systems;
+
+      # CAST flakeModule import
+      imports = [ inputs.cast.flakeModules.default ];
+
+      perSystem = { config, castLib, ... }: {
+        # CAST 저장소 경로 설정
+        cast.storePath = "/data/lab-databases";
+
         packages = {
-          ncbi-nr = castLib.mkDataset {...};
-          uniprot = castLib.mkDataset {...};
+          ncbi-nr = castLib.mkDataset {
+            name = "ncbi-nr";
+            version = "2024-01-15";
+            manifest = ./manifests/ncbi-nr.json;
+          };
+
+          uniprot = castLib.mkDataset {
+            name = "uniprot";
+            version = "2024-01";
+            manifest = ./manifests/uniprot.json;
+          };
 
           # 변환
           ncbi-nr-mmseqs = castLib.transform {
+            name = "ncbi-nr-mmseqs";
             src = config.packages.ncbi-nr;
-            builder = "...";
+            builder = pkgs.writeShellScript "to-mmseqs" ''
+              ${pkgs.mmseqs2}/bin/mmseqs createdb \
+                "$SOURCE_DATA/nr.fasta" \
+                "$CAST_OUTPUT/nr_mmseqs"
+            '';
           };
         };
       };
@@ -441,23 +531,26 @@ cast transform \
 
 ### 빠른 참조
 
-**순수 설정 패턴** (권장):
+**CAST flakeModule 설정 패턴** (권장):
 
 ```nix
-# flake.nix에서
-let
-  castLib = cast.lib.configure {
-    storePath = "/data/cast-store";
+{
+  imports = [ inputs.cast.flakeModules.default ];
+
+  perSystem = { castLib, ... }: {
+    # CAST 저장소 경로 설정
+    cast.storePath = "/data/cast-store";
+
+    # castLib이 자동으로 주입되어 사용 가능
+    packages.my-db = castLib.mkDataset {...};
   };
-in {
-  packages.my-db = castLib.mkDataset {...};
 }
 ```
 
 **설정 우선순위**:
 
 1. `mkDataset`의 명시적 `storePath` 매개변수
-2. `cast.lib.configure`에 전달된 설정
+2. `cast.storePath`에 설정된 경로
 3. 도움말 메시지와 함께 오류 (암묵적 기본값 없음)
 
 **데이터셋을 위한 환경 변수** (자동 생성):
@@ -511,36 +604,44 @@ in {
 ### 데이터베이스 변환
 
 ```nix
-let
-  castLib = cast.lib.configure {storePath = "/data/cast";};
+{
+  imports = [ inputs.cast.flakeModules.default ];
 
-  # 원본 FASTA 데이터베이스
-  ncbiRaw = castLib.mkDataset {...};
+  perSystem = { castLib, pkgs, config, ... }: {
+    cast.storePath = "/data/cast";
 
-  # MMseqs 형식으로 변환
-  ncbiMmseqs = castLib.transform {
-    name = "ncbi-to-mmseqs";
-    src = ncbiRaw;
-    builder = ''
-      ${pkgs.mmseqs2}/bin/mmseqs createdb \
-        "$SOURCE_DATA/nr.fasta" \
-        "$CAST_OUTPUT/nr_mmseqs"
-    '';
+    packages = {
+      # 원본 FASTA 데이터베이스
+      ncbi-raw = castLib.mkDataset {
+        name = "ncbi-nr";
+        version = "2024-01-15";
+        manifest = ./ncbi-nr.json;
+      };
+
+      # MMseqs 형식으로 변환
+      ncbi-mmseqs = castLib.transform {
+        name = "ncbi-to-mmseqs";
+        src = config.packages.ncbi-raw;
+        builder = ''
+          ${pkgs.mmseqs2}/bin/mmseqs createdb \
+            "$SOURCE_DATA/nr.fasta" \
+            "$CAST_OUTPUT/nr_mmseqs"
+        '';
+      };
+
+      # BLAST 형식으로 변환
+      ncbi-blast = castLib.transform {
+        name = "ncbi-to-blast";
+        src = config.packages.ncbi-raw;
+        builder = ''
+          ${pkgs.blast}/bin/makeblastdb \
+            -in "$SOURCE_DATA/nr.fasta" \
+            -dbtype prot \
+            -out "$CAST_OUTPUT/nr_blast"
+        '';
+      };
+    };
   };
-
-  # BLAST 형식으로 변환
-  ncbiBlast = castLib.transform {
-    name = "ncbi-to-blast";
-    src = ncbiRaw;
-    builder = ''
-      ${pkgs.blast}/bin/makeblastdb \
-        -in "$SOURCE_DATA/nr.fasta" \
-        -dbtype prot \
-        -out "$CAST_OUTPUT/nr_blast"
-    '';
-  };
-in {
-  inherit ncbiMmseqs ncbiBlast;
 }
 ```
 
@@ -561,7 +662,8 @@ in {
 ```
 cast/
 ├── lib/                  # Nix 라이브러리 함수
-│   ├── default.nix       # 주요 내보내기 + configure
+│   ├── default.nix       # 주요 내보내기
+│   ├── flake-module.nix  # flake-parts 모듈 (권장)
 │   ├── mkDataset.nix
 │   ├── transform.nix
 │   ├── manifest.nix
@@ -618,10 +720,11 @@ nix fmt
 - [x] 기본 CLI (`put`, `get`, `transform`)
 - [x] 변환 출처 추적
 
-### 2단계: 순수 설정 ✅
-- [x] 순수 설정 패턴 (`configure`)
+### 2단계: flakeModules 패턴 ✅
+- [x] flake-parts 기반 flakeModules 패턴
+- [x] 자동 castLib 주입 (perSystem)
 - [x] 환경 변수 불필요
-- [x] 타입 검사된 설정
+- [x] 타입 검사된 설정 (cast.storePath)
 - [x] Nix 패키지로서의 cast-cli
 - [x] 완전한 데이터베이스 레지스트리 예제
 - [x] `nix build --pure`와 호환
