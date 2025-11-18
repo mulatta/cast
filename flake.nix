@@ -9,6 +9,7 @@
       ];
 
       perSystem = {
+        config,
         lib,
         pkgs,
         self',
@@ -17,10 +18,41 @@
       }: {
         _module.args.pkgs = import inputs.nixpkgs {
           inherit system;
-          overlays = [
-            inputs.rust-overlay.overlays.default
-          ];
+          overlays = [inputs.rust-overlay.overlays.default];
           config.allowUnfree = true;
+        };
+
+        packages = {
+          cast-cli = pkgs.rustPlatform.buildRustPackage {
+            pname = "cast-cli";
+            version = "0.1.0";
+
+            src = inputs.gitignore.lib.gitignoreSource ./packages/cast-cli;
+
+            cargoLock = {
+              lockFile = ./packages/cast-cli/Cargo.lock;
+            };
+
+            nativeBuildInputs = with pkgs; [pkg-config];
+
+            buildInputs = with pkgs;
+              [sqlite]
+              ++ lib.optionals stdenv.isDarwin [
+                darwin.apple_sdk.frameworks.Security
+                darwin.apple_sdk.frameworks.SystemConfiguration
+              ];
+
+            meta = with lib; {
+              description = "Content-Addressed Storage Tool for scientific databases";
+              homepage = "https://github.com/yourusername/cast";
+              license = licenses.mit;
+              maintainers = [];
+              mainProgram = "cast";
+              platforms = platforms.all;
+            };
+          };
+
+          default = config.packages.cast-cli;
         };
 
         checks = let
@@ -220,6 +252,27 @@
                 pkgs.runCommand "check-filter-by-path" {} ''
                   echo "filterByPath test passed" > $out
                 '';
+
+            # Test builders availability
+            integration-builders-available = let
+              # Create configured library
+              testCastLib = castLib.configure {
+                storePath = "/tmp/test-cast-store";
+              };
+
+              # Check that builder functions exist and are callable
+              hasToMMseqs = builtins.isFunction testCastLib.toMMseqs;
+              hasToBLAST = builtins.isFunction testCastLib.toBLAST;
+              hasToDiamond = builtins.isFunction testCastLib.toDiamond;
+              hasExtractArchive = builtins.isFunction testCastLib.extractArchive;
+            in
+              assert hasToMMseqs;
+              assert hasToBLAST;
+              assert hasToDiamond;
+              assert hasExtractArchive;
+                pkgs.runCommand "check-builders-available" {} ''
+                  echo "All builders are available and callable" > $out
+                '';
           };
         in
           {inherit (self') formatter;}
@@ -245,6 +298,8 @@
     # keep-sorted start
     flake-parts.inputs.nixpkgs-lib.follows = "nixpkgs";
     flake-parts.url = "github:hercules-ci/flake-parts";
+    gitignore.inputs.nixpkgs.follows = "nixpkgs";
+    gitignore.url = "github:hercules-ci/gitignore.nix";
     nix-ai-tools.url = "github:numtide/nix-ai-tools";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
     rust-overlay.inputs.nixpkgs.follows = "nixpkgs";

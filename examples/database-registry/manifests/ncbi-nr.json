@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "dataset": {
+    "name": "ncbi-nr",
+    "version": "2024-01-15",
+    "description": "NCBI Non-Redundant Protein Database"
+  },
+  "source": {
+    "url": "ftp://ftp.ncbi.nlm.nih.gov/blast/db/nr.tar.gz",
+    "download_date": "2024-01-15T10:30:00Z",
+    "server_mtime": "2024-01-14T18:00:00Z",
+    "archive_hash": "blake3:af1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd"
+  },
+  "contents": [
+    {
+      "path": "nr.fasta",
+      "hash": "blake3:b3cd567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+      "size": 123456789,
+      "executable": false
+    },
+    {
+      "path": "nr.fasta.index",
+      "hash": "blake3:c4de678901bcdef01234567890abcdef1234567890abcdef1234567890abcdef",
+      "size": 987654,
+      "executable": false
+    }
+  ],
+  "transformations": []
+}

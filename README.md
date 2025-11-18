@@ -11,12 +11,13 @@ CAST solves the challenge of managing large biological databases (NCBI, UniProt,
 
 ### Key Features
 
+- **Pure Configuration**: Zero environment variables required, all configuration in Nix
 - **Content-Addressed Storage**: BLAKE3-based deduplication and integrity verification
 - **Nix Integration**: Databases as Nix flake inputs with full dependency tracking
 - **Transformation Pipelines**: Reproducible data transformations with provenance tracking
 - **Version Management**: Multi-version database registries with easy version pinning
 - **Space Efficient**: Deduplication across dataset versions
-- **Reproducible**: Immutable datasets with cryptographic hashes
+- **Type-Safe**: All configuration validated at Nix evaluation time
 
 ## Quick Start
 
@@ -27,10 +28,10 @@ Add CAST as a flake input:
 ```nix
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
     cast.url = "github:yourusername/cast";
   };
-  
+
   outputs = { self, nixpkgs, cast }: {
     # Your packages here
   };
@@ -41,12 +42,34 @@ Build the CLI tool:
 
 ```bash
 nix build github:yourusername/cast#cast-cli
-./result/bin/cast-cli --version
+./result/bin/cast --version
 ```
 
 ### Basic Usage
 
-1. **Create a dataset manifest** (`my-dataset-manifest.json`):
+1. **Configure CAST library** in your flake:
+
+```nix
+{
+  outputs = { self, nixpkgs, cast }: let
+    # Configure CAST with explicit storage path
+    castLib = cast.lib.configure {
+      storePath = "/data/lab-databases";
+    };
+  in {
+    packages.x86_64-linux = {
+      # Use configured library
+      my-dataset = castLib.mkDataset {
+        name = "my-dataset";
+        version = "1.0.0";
+        manifest = ./my-dataset-manifest.json;
+      };
+    };
+  };
+}
+```
+
+2. **Create a dataset manifest** (`my-dataset-manifest.json`):
 
 ```json
 {
@@ -72,30 +95,11 @@ nix build github:yourusername/cast#cast-cli
 }
 ```
 
-2. **Store files in CAST**:
+3. **Build and use**:
 
 ```bash
-# Store files (generates BLAKE3 hashes)
-cast-cli put data.txt
-```
-
-3. **Create a dataset derivation**:
-
-```nix
-{
-  packages.x86_64-linux.my-dataset = cast.lib.mkDataset {
-    name = "my-dataset";
-    version = "1.0.0";
-    manifest = ./my-dataset-manifest.json;
-  };
-}
-```
-
-4. **Build and use**:
-
-```bash
-# Build the dataset
-CAST_STORE=$HOME/.cache/cast nix build --impure .#my-dataset
+# Build the dataset (pure evaluation!)
+nix build .#my-dataset
 
 # Files are available as symlinks
 ls -la result/data/
@@ -108,11 +112,12 @@ cat result/data/data.txt
 ┌─────────────────────────────────────┐
 │ User Projects                        │
 │  - Flake inputs (database deps)     │
-│  - Reproducible workflows            │
+│  - Pure configuration                │
 └─────────────────────────────────────┘
                 ↓
 ┌─────────────────────────────────────┐
 │ CAST Library (lib/*.nix)             │
+│  - configure                         │
 │  - mkDataset                         │
 │  - transform                         │
 │  - fetchDatabase (future)            │
@@ -128,7 +133,7 @@ cat result/data/data.txt
 └──────────────────┴──────────────────┘
                 ↓
 ┌─────────────────────────────────────┐
-│ CAS Backend ($CAST_STORE)            │
+│ CAS Backend (configured storePath)   │
 │                                      │
 │ store/{hash[:2]}/{hash[2:4]}/{hash} │
 │ - Actual file content                │
@@ -139,24 +144,71 @@ cat result/data/data.txt
 
 ### Data Flow
 
-1. **Files** → `cast-cli put` → **CAST store** (content-addressed)
-2. **Manifest** → `cast.lib.mkDataset` → **Nix derivation** (metadata + symlinks)
-3. **Source dataset** → `cast.lib.transform` → **Transformed dataset** (with provenance)
+1. **Files** → `cast put` → **CAST store** (content-addressed)
+2. **Manifest** + **Configuration** → `castLib.mkDataset` → **Nix derivation** (pure)
+3. **Source dataset** → `castLib.transform` → **Transformed dataset** (with provenance)
 
 ## API Reference
 
-### `cast.lib.mkDataset`
+### `cast.lib.configure`
+
+Create a configured CAST library instance.
+
+```nix
+castLib = cast.lib.configure {
+  storePath = "/data/cast-store";  # Required: where to store data
+  # Future options:
+  # preferredDownloader = "aria2c";
+  # compressionLevel = 9;
+}
+```
+
+**Parameters**:
+- `storePath` (string, required): Path to CAST storage directory
+
+**Returns**: Configured library instance with all CAST functions
+
+**Example with flake-parts**:
+
+```nix
+{
+  inputs.cast.url = "github:yourusername/cast";
+  inputs.flake-parts.url = "github:hercules-ci/flake-parts";
+
+  outputs = inputs @ {flake-parts, ...}:
+    flake-parts.lib.mkFlake {inherit inputs;} {
+      perSystem = {config, pkgs, ...}: let
+        castLib = inputs.cast.lib.configure {
+          storePath = "/data/lab-databases";
+        };
+      in {
+        packages = {
+          ncbi-nr = castLib.mkDataset {...};
+          uniprot = castLib.mkDataset {...};
+        };
+      };
+    };
+}
+```
+
+### `castLib.mkDataset`
 
 Create a dataset derivation from a manifest.
 
 ```nix
-cast.lib.mkDataset {
+castLib.mkDataset {
   name = "dataset-name";
   version = "1.0.0";
   manifest = ./manifest.json;  # Or attribute set
-  storePath = null;  # Optional: override CAST_STORE
+  storePath = null;  # Optional: override configured storePath
 }
 ```
+
+**Parameters**:
+- `name` (string): Dataset name (used for environment variables)
+- `version` (string): Dataset version
+- `manifest` (path or attrset): Dataset manifest
+- `storePath` (string, optional): Override configured storage path
 
 **Returns**: A Nix derivation with:
 - `/data/` - Symlinks to files in CAST store
@@ -167,7 +219,9 @@ cast.lib.mkDataset {
 
 ```nix
 let
-  ncbiNr = cast.lib.mkDataset {
+  castLib = cast.lib.configure {storePath = "/data/cast";};
+
+  ncbiNr = castLib.mkDataset {
     name = "ncbi-nr";
     version = "2024-01-15";
     manifest = ./ncbi-nr-manifest.json;
@@ -179,51 +233,55 @@ pkgs.mkShell {
 }
 ```
 
-### `cast.lib.transform`
+### `castLib.transform`
 
 Transform a dataset with a builder script.
 
 ```nix
-cast.lib.transform {
+castLib.transform {
   name = "transformation-name";
   src = sourceDataset;  # Input dataset
   builder = ''
     # Bash script with access to:
     # $SOURCE_DATA - input files
     # $CAST_OUTPUT - output directory
-    
+
     process-data "$SOURCE_DATA"/* > "$CAST_OUTPUT/result.txt"
   '';
   params = {};  # Optional transformation parameters
 }
 ```
 
+**Parameters**:
+- `name` (string): Transformation name
+- `src` (derivation): Source dataset
+- `builder` (string): Bash script for transformation
+- `params` (attrset, optional): Transformation parameters (passed as JSON)
+
 **Returns**: A dataset derivation with transformed data and provenance chain.
 
-**Example**:
+**Example - Convert FASTA to MMseqs2**:
 
 ```nix
 let
-  rawData = cast.lib.mkDataset {...};
-  
-  processedData = cast.lib.transform {
-    name = "filter-large-files";
-    src = rawData;
-    params = { minSize = 10000; };
-    
+  castLib = cast.lib.configure {storePath = "/data/cast";};
+
+  rawFasta = castLib.mkDataset {...};
+
+  mmseqsDb = castLib.transform {
+    name = "to-mmseqs";
+    src = rawFasta;
+
     builder = ''
-      MIN=$(echo "$CAST_TRANSFORM_PARAMS" | jq -r '.minSize')
-      for file in "$SOURCE_DATA"/*; do
-        if [ $(stat -c%s "$file") -ge $MIN ]; then
-          cp "$file" "$CAST_OUTPUT/"
-        fi
-      done
+      ${pkgs.mmseqs2}/bin/mmseqs createdb \
+        "$SOURCE_DATA/sequences.fasta" \
+        "$CAST_OUTPUT/mmseqs_db"
     '';
   };
-in processedData
+in mmseqsDb
 ```
 
-### `cast.lib.symlinkSubset` (Future)
+### `cast.lib.symlinkSubset`
 
 Create a subset of datasets with selected files.
 
@@ -242,7 +300,7 @@ cast.lib.symlinkSubset {
 Download and register a database.
 
 ```nix
-cast.lib.fetchDatabase {
+castLib.fetchDatabase {
   name = "ncbi-nr";
   url = "ftp://ftp.ncbi.nlm.nih.gov/blast/db/nr.tar.gz";
   hash = "blake3:...";  # Optional verification
@@ -258,7 +316,22 @@ See [`examples/simple-dataset/`](examples/simple-dataset/) for a basic example w
 
 ```bash
 cd examples/simple-dataset
-CAST_STORE=$HOME/.cache/cast nix build --impure .#example-dataset
+nix build .#example-dataset  # Pure evaluation!
+```
+
+**Key pattern**:
+```nix
+let
+  castLib = cast.lib.configure {
+    storePath = builtins.getEnv "HOME" + "/.cache/cast";
+  };
+in {
+  example-dataset = castLib.mkDataset {
+    name = "simple-example";
+    version = "1.0.0";
+    manifest = ./manifest.json;
+  };
+}
 ```
 
 ### Transformations
@@ -271,46 +344,92 @@ See [`examples/transformation/`](examples/transformation/) for transformation pi
 
 ```bash
 cd examples/transformation
-CAST_STORE=$HOME/.cache/cast nix build --impure .#example-chain
+nix build .#example-chain
 cat result/manifest.json | jq '.transformations'
 ```
 
-### Database Registry
+### Multi-Version Database Registry
 
 See [`examples/registry/`](examples/registry/) for multi-version database management:
 
+```nix
+databases = {
+  test-db = {
+    "1.0.0" = castLib.mkDataset {...};
+    "1.1.0" = castLib.mkDataset {...};
+    "2.0.0" = castLib.mkDataset {...};
+  };
+};
+
+# Use specific version
+packages.test-db-latest = databases.test-db."2.0.0";
+packages.test-db-stable = databases.test-db."1.1.0";
+```
+
 ```bash
 cd examples/registry
-CAST_STORE=$HOME/.cache/cast nix build --impure .#test-db-latest
+nix build .#test-db-latest
 nix develop .#legacy  # Use older version
+```
+
+### Production Database Registry with flake-parts
+
+See [`examples/database-registry/`](examples/database-registry/) for production-ready pattern:
+
+```nix
+{
+  inputs.flake-parts.url = "github:hercules-ci/flake-parts";
+
+  outputs = inputs @ {flake-parts, ...}:
+    flake-parts.lib.mkFlake {inherit inputs;} {
+      perSystem = {config, ...}: let
+        castConfig = {
+          storePath = "/data/lab-databases";
+          preferredDownloader = "aria2c";
+        };
+        castLib = inputs.cast.lib.configure castConfig;
+      in {
+        packages = {
+          ncbi-nr = castLib.mkDataset {...};
+          uniprot = castLib.mkDataset {...};
+
+          # Transformations
+          ncbi-nr-mmseqs = castLib.transform {
+            src = config.packages.ncbi-nr;
+            builder = "...";
+          };
+        };
+      };
+    };
+}
 ```
 
 ## CLI Reference
 
-### `cast-cli put`
+### `cast put`
 
 Store a file in CAST and return its hash:
 
 ```bash
-cast-cli put /path/to/file
+cast put /path/to/file
 # Output: blake3:abc123...
 ```
 
-### `cast-cli get`
+### `cast get`
 
 Retrieve the path to a file by hash:
 
 ```bash
-cast-cli get blake3:abc123...
-# Output: /home/user/.cache/cast/store/ab/c1/abc123...
+cast get blake3:abc123...
+# Output: /data/cast-store/store/ab/c1/abc123...
 ```
 
-### `cast-cli transform`
+### `cast transform`
 
-Generate transformation manifest (used by `cast.lib.transform`):
+Generate transformation manifest (used by `castLib.transform`):
 
 ```bash
-cast-cli transform \
+cast transform \
   --input-manifest source-manifest.json \
   --output-dir ./output \
   --transform-type my-transform
@@ -318,19 +437,32 @@ cast-cli transform \
 
 ## Configuration
 
-### Storage Location
+See [`CONFIGURATION.md`](CONFIGURATION.md) for detailed configuration guide.
 
-CAST store location (priority order):
+### Quick Reference
 
-1. `$CAST_STORE` environment variable
-2. Flake `storePath` parameter
-3. `~/.config/cast/config.toml`
-4. Default: `~/.cache/cast`
+**Pure configuration pattern** (recommended):
 
-### Environment Variables
+```nix
+# In your flake.nix
+let
+  castLib = cast.lib.configure {
+    storePath = "/data/cast-store";
+  };
+in {
+  packages.my-db = castLib.mkDataset {...};
+}
+```
 
-- `CAST_STORE` - Override default storage location
-- `CAST_DATASET_<NAME>` - Auto-set by datasets (points to `/data`)
+**Configuration priority**:
+
+1. Explicit `storePath` parameter in `mkDataset`
+2. Configuration passed to `cast.lib.configure`
+3. Error with helpful message (no implicit defaults)
+
+**Environment variables for datasets** (auto-generated):
+
+- `CAST_DATASET_<NAME>` - Path to dataset `/data` directory
 - `CAST_DATASET_<NAME>_VERSION` - Dataset version
 - `CAST_DATASET_<NAME>_MANIFEST` - Path to manifest
 
@@ -341,16 +473,16 @@ CAST store location (priority order):
 ```nix
 {
   inputs.databases.url = "git+ssh://lab-server/databases";
-  
+
   outputs = { self, nixpkgs, databases }: {
     packages.x86_64-linux.analysis = pkgs.mkDerivation {
       name = "protein-analysis";
       buildInputs = [
-        databases.databases.ncbi-nr."2024-01-15"
-        databases.databases.uniprot."2024.01"
+        databases.packages.x86_64-linux.ncbi-nr
+        databases.packages.x86_64-linux.uniprot
         pkgs.mmseqs2
       ];
-      
+
       buildPhase = ''
         mmseqs search \
           query.fasta \
@@ -379,10 +511,14 @@ CAST store location (priority order):
 ### Database Transformations
 
 ```nix
-# Convert NCBI to MMseqs format
 let
-  ncbiRaw = cast.lib.mkDataset {...};
-  ncbiMmseqs = cast.lib.transform {
+  castLib = cast.lib.configure {storePath = "/data/cast";};
+
+  # Original FASTA database
+  ncbiRaw = castLib.mkDataset {...};
+
+  # Convert to MMseqs format
+  ncbiMmseqs = castLib.transform {
     name = "ncbi-to-mmseqs";
     src = ncbiRaw;
     builder = ''
@@ -391,7 +527,21 @@ let
         "$CAST_OUTPUT/nr_mmseqs"
     '';
   };
-in ncbiMmseqs
+
+  # Convert to BLAST format
+  ncbiBlast = castLib.transform {
+    name = "ncbi-to-blast";
+    src = ncbiRaw;
+    builder = ''
+      ${pkgs.blast}/bin/makeblastdb \
+        -in "$SOURCE_DATA/nr.fasta" \
+        -dbtype prot \
+        -out "$CAST_OUTPUT/nr_blast"
+    '';
+  };
+in {
+  inherit ncbiMmseqs ncbiBlast;
+}
 ```
 
 ## Design Decisions
@@ -400,8 +550,9 @@ See [`CLAUDE.md`](CLAUDE.md) for detailed architecture decisions:
 
 - Why BLAKE3 for hashing
 - Why separate data from metadata
-- Why Nix integration
+- Why pure configuration (no environment variables)
 - Storage format rationale
+- Why Nix integration
 
 ## Development
 
@@ -410,15 +561,18 @@ See [`CLAUDE.md`](CLAUDE.md) for detailed architecture decisions:
 ```
 cast/
 ├── lib/                  # Nix library functions
+│   ├── default.nix       # Main exports + configure
 │   ├── mkDataset.nix
 │   ├── transform.nix
-│   └── ...
+│   ├── manifest.nix
+│   └── types.nix
 ├── packages/
 │   └── cast-cli/        # Rust CLI tool
 ├── examples/            # Usage examples
 │   ├── simple-dataset/
 │   ├── transformation/
-│   └── registry/
+│   ├── registry/
+│   └── database-registry/
 └── schemas/             # JSON schemas
     └── manifest-v1.json
 ```
@@ -433,46 +587,57 @@ cd cast
 # Build CLI tool
 nix build .#cast-cli
 
-# Run tests
+# Run all tests
 nix flake check
 
-# Development shell
+# Development shell with Rust tooling
 nix develop
 ```
 
 ### Running Tests
 
 ```bash
+# Nix library tests
+nix build .#checks.x86_64-linux.lib-validators
+nix build .#checks.x86_64-linux.integration-mkDataset-attrset
+
 # Rust tests
 cd packages/cast-cli
 cargo test
 
-# Integration tests
-nix build .#checks.x86_64-linux.test-mkDataset
-nix build .#checks.x86_64-linux.test-transform
+# Format code
+nix fmt
 ```
 
 ## Roadmap
 
-### Phase 1: MVP ✓
+### Phase 1: MVP ✅
 - [x] Core library functions (`mkDataset`, `transform`)
 - [x] BLAKE3 hashing
 - [x] Local storage backend
 - [x] Basic CLI (`put`, `get`, `transform`)
 - [x] Transformation provenance tracking
 
-### Phase 2: Database Management (Future)
+### Phase 2: Pure Configuration ✅
+- [x] Pure configuration pattern (`configure`)
+- [x] Zero environment variables required
+- [x] Type-checked configuration
+- [x] cast-cli as Nix package
+- [x] Complete database registry examples
+- [x] Works with `nix build --pure`
+
+### Phase 3: Database Management (In Progress)
+- [ ] Common transformation builders (`toMMseqs`, `toBLAST`, `toDiamond`)
+- [ ] NixOS module for system-wide database management
+- [ ] Comprehensive documentation
+
+### Phase 4: Advanced Features (Future)
 - [ ] `fetchDatabase` implementation
 - [ ] Automatic manifest generation
-- [ ] Archive extraction
-- [ ] HTTP/FTP download support
-
-### Phase 3: Advanced Features (Future)
 - [ ] Garbage collection
 - [ ] Multi-tier storage (SSD/HDD)
 - [ ] Remote storage backends
 - [ ] Web UI for dataset browsing
-- [ ] NixOS module
 
 ## Contributing
 
@@ -482,6 +647,7 @@ Contributions welcome! Please:
 2. Add tests for new features
 3. Update documentation
 4. Run `nix fmt` before committing
+5. Use pure configuration patterns (no environment variables)
 
 ## License
 

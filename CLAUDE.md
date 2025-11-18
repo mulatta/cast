@@ -108,11 +108,18 @@ A hybrid system that mimics `/nix/store` behavior but for large data files:
 - **Caching**: Transformation results tracked in SQLite
 - **Result**: Only manifest goes to `/nix/store`, data stays in CAS
 
-### 5. Storage Configuration Priority
-1. `$CAST_STORE` environment variable
-2. Flake's `defaultStorePath` attribute
-3. `~/.config/cast/config.toml`
-4. Default: `~/.cache/cast`
+### 5. Pure Configuration Pattern
+**No environment variables required** for reproducible builds:
+- **Primary**: `cast.lib.configure {storePath = "...";}` creates configured library
+- **Override**: Individual `mkDataset` calls can override with explicit `storePath` parameter
+- **Priority**: Explicit parameter > Configuration > Error (no implicit defaults)
+- **Result**: Works with `nix build --pure` out of the box
+
+Example:
+```nix
+let castLib = cast.lib.configure {storePath = "/data/cast";};
+in castLib.mkDataset {...}  # Pure evaluation!
+```
 
 ### 6. SQLite Usage
 **Required** for:
@@ -242,16 +249,39 @@ pub trait StorageBackend {
 
 ```nix
 cast.lib = {
+  # ═══════════════════════════════════════════════════════
+  # Configuration Function (Phase 2)
+  # ═══════════════════════════════════════════════════════
+
+  # Create a configured CAST library instance
+  configure = {
+    storePath,      # Required: absolute path to CAST store
+    # Future options:
+    # preferredDownloader ? "aria2c",
+    # compressionLevel ? 9,
+  }: {
+    # Returns configured library with bound functions
+    mkDataset = {...};
+    transform = {...};
+    fetchDatabase = {...};  # Future
+    symlinkSubset = {...};
+    inherit manifest types;
+  };
+
+  # ═══════════════════════════════════════════════════════
+  # Direct Functions (for backward compatibility)
+  # ═══════════════════════════════════════════════════════
+
   # Create a dataset derivation from manifest
-  mkDataset = {
+  mkDataset = config: {
     name,           # Dataset name
     version,        # Version string
     manifest,       # Path to manifest.json or attrset
-    storePath ? null, # Optional: override CAST_STORE
+    storePath ? null, # Optional: override configured storePath
   }: derivation;
 
-  # Download and register a database
-  fetchDatabase = {
+  # Download and register a database (Future)
+  fetchDatabase = config: {
     name,
     url,
     hash ? null,    # Optional: expected BLAKE3 hash
@@ -260,11 +290,12 @@ cast.lib = {
   }: manifest;
 
   # Transform dataset
-  transform = {
+  transform = config: {
     name,
     src,            # Source dataset
     builder,        # Transformation function/script
     outputs ? ["out"], # Output structure
+    params ? {},    # Transformation parameters (as JSON)
   }: derivation;
 
   # Create symlink subset
@@ -273,23 +304,55 @@ cast.lib = {
     paths,          # List of { name, path } or datasets
   }: derivation;
 
+  # ═══════════════════════════════════════════════════════
   # Utilities
-  readManifest = path: attrset;
-  hashToPath = hash: path;
-  manifestToEnv = manifest: { VAR = "value"; ... };
+  # ═══════════════════════════════════════════════════════
+
+  manifest = {
+    readManifest = path: attrset;
+    hashToPath = storePath: hash: path;
+    manifestToEnv = manifest: { VAR = "value"; ... };
+    # ... other manifest utilities
+  };
+
+  types = {
+    validators = {
+      isValidBlake3Hash = hash: bool;
+      isValidManifest = manifest: bool;
+      # ... other validators
+    };
+  };
 };
+```
+
+**Recommended Usage Pattern**:
+```nix
+# 1. Configure once
+let castLib = cast.lib.configure {storePath = "/data/cast";};
+
+# 2. Use configured library
+in {
+  db1 = castLib.mkDataset {...};
+  db2 = castLib.mkDataset {...};
+  db3 = castLib.transform {src = db1; ...};
+}
 ```
 
 ## Usage Examples
 
-### Example 1: Basic Database Registration
+### Example 1: Basic Database Registration (Pure)
 
 ```nix
 {
   inputs.cast.url = "github:yourusername/cast";
 
-  outputs = { cast, ... }: {
-    packages.x86_64-linux.ncbi-nr = cast.lib.mkDataset {
+  outputs = { cast, ... }: let
+    # Configure CAST library
+    castLib = cast.lib.configure {
+      storePath = "/data/lab-databases";
+    };
+  in {
+    packages.x86_64-linux.ncbi-nr = castLib.mkDataset {
       name = "ncbi-nr";
       version = "2024-01-15";
       manifest = ./manifests/ncbi-nr-2024-01-15.json;
@@ -298,42 +361,66 @@ cast.lib = {
 }
 ```
 
-### Example 2: Download and Transform
+**Pure evaluation**: No `--impure` flag needed!
+```bash
+nix build .#ncbi-nr  # Works with --pure
+```
+
+### Example 2: Transform Pipeline
 
 ```nix
 { cast, pkgs }:
 let
-  # Download original archive
-  ncbiNrArchive = cast.lib.fetchDatabase {
-    name = "ncbi-nr-archive";
-    url = "ftp://ftp.ncbi.nlm.nih.gov/blast/db/nr.tar.gz";
-    extract = true;
+  # Configure library
+  castLib = cast.lib.configure {
+    storePath = "/data/databases";
   };
 
-  # Transform to mmseqs database
-  ncbiNrMmseqs = cast.lib.transform {
-    name = "ncbi-nr-mmseqs";
-    src = ncbiNrArchive;
+  # Original FASTA dataset
+  ncbiRaw = castLib.mkDataset {
+    name = "ncbi-nr-raw";
+    version = "2024-01-15";
+    manifest = ./ncbi-nr.json;
+  };
 
-    builder = pkgs.writeShellScript "build-mmseqs" ''
-      mmseqs createdb ${ncbiNrArchive}/nr.fasta $CAST_OUTPUT/nr
-      mmseqs createindex $CAST_OUTPUT/nr $CAST_OUTPUT/tmp
+  # Transform to MMseqs2 format
+  ncbiMmseqs = castLib.transform {
+    name = "ncbi-nr-mmseqs";
+    src = ncbiRaw;
+
+    builder = ''
+      ${pkgs.mmseqs2}/bin/mmseqs createdb \
+        "$SOURCE_DATA/nr.fasta" \
+        "$CAST_OUTPUT/nr"
+
+      ${pkgs.mmseqs2}/bin/mmseqs createindex \
+        "$CAST_OUTPUT/nr" \
+        "$CAST_OUTPUT/tmp"
     '';
   };
 in
 pkgs.mkShell {
-  buildInputs = [ pkgs.mmseqs2 ncbiNrMmseqs ];
+  buildInputs = [ pkgs.mmseqs2 ncbiMmseqs ];
+
+  shellHook = ''
+    echo "MMseqs database: $CAST_DATASET_NCBI_NR_MMSEQS"
+  '';
 }
 ```
 
-### Example 3: Database Registry
+### Example 3: Multi-Version Database Registry
 
 ```nix
 # databases/flake.nix
 {
   inputs.cast.url = "github:yourusername/cast";
 
-  outputs = { cast, ... }: {
+  outputs = { cast, ... }: let
+    # Single configuration for all databases
+    castLib = cast.lib.configure {
+      storePath = "/data/shared-databases";
+    };
+  in {
     # Export as flake outputs
     databases = {
       ncbi-nr = {
@@ -361,34 +448,59 @@ pkgs.mkShell {
 
 ## Implementation Phases
 
-### Phase 1: MVP Core (Current Focus)
-- [ ] Project structure skeleton
-- [ ] Manifest schema definition
-- [ ] Nix library abstractions (`cast.lib.*`)
-- [ ] Rust CLI basic structure
-- [ ] BLAKE3 hashing implementation
-- [ ] Local storage backend
-- [ ] SQLite schema and basic operations
+### Phase 1: MVP Core ✅ (Completed)
+- [x] Project structure skeleton
+- [x] Manifest schema definition
+- [x] Nix library abstractions (`cast.lib.*`)
+- [x] Rust CLI basic structure
+- [x] BLAKE3 hashing implementation
+- [x] Local storage backend
+- [x] SQLite schema and basic operations
+- [x] `cast.lib.mkDataset` implementation
+- [x] `cast.lib.transform` implementation
+- [x] Symlink farm generation
+- [x] Environment variable injection
+- [x] Manifest validation
+- [x] Transformation provenance tracking
 
-### Phase 2: Data Management
-- [ ] `cast fetch` command
-- [ ] `cast put` / `cast get` commands
-- [ ] Automatic symlink farm generation
-- [ ] Environment variable injection
-- [ ] Manifest validation
+### Phase 2: Pure Configuration ✅ (Completed)
+- [x] `cast.lib.configure` function
+- [x] Pure configuration pattern (no environment variables)
+- [x] Works with `nix build --pure`
+- [x] Type-checked configuration
+- [x] cast-cli as Nix package
+- [x] gitignore.nix integration
+- [x] Complete database registry examples
+- [x] flake-parts integration pattern
+- [x] Comprehensive documentation (README, CONFIGURATION.md)
 
-### Phase 3: Transformation Pipeline
-- [ ] `cast.lib.transform` implementation
-- [ ] Transformation caching
-- [ ] Dependency graph tracking
-- [ ] Common transformations library (extract, mmseqs, blast)
+**Success Criteria Met**:
+- ✅ Zero environment variables required
+- ✅ All config type-checked
+- ✅ Works with `nix build --pure`
+- ✅ cast-cli package available
+- ✅ Complete database registry example
 
-### Phase 4: Advanced Features
+### Phase 3: Database Management (In Progress)
+- [ ] Common transformation builders (`lib/builders.nix`)
+  - [ ] `toMMseqs` - Convert FASTA to MMseqs2 format
+  - [ ] `toBLAST` - Convert FASTA to BLAST format
+  - [ ] `toDiamond` - Convert FASTA to Diamond format
+- [ ] NixOS module for system-wide database management
+- [ ] `fetchDatabase` implementation
+- [ ] Automatic manifest generation
+- [ ] Archive extraction
+
+### Phase 4: Advanced Features (Future)
 - [ ] Garbage collection (`cast gc`)
-- [ ] Multi-storage backend support
-- [ ] NixOS module
+- [ ] Multi-tier storage (SSD/HDD)
+- [ ] Remote storage backends
 - [ ] Remote registry synchronization
 - [ ] Web UI for database browsing
+- [ ] Performance optimizations
+  - [ ] Parallel hashing for multi-file datasets
+  - [ ] Incremental updates (rsync-style)
+  - [ ] Compression (zstd) for cold storage
 
 ## Development Guidelines
 
@@ -412,14 +524,58 @@ pkgs.mkShell {
 
 ## Configuration
 
-### Storage Configuration (`config.toml`)
+See [`CONFIGURATION.md`](CONFIGURATION.md) for comprehensive configuration guide.
+
+### Pure Configuration Pattern (Phase 2)
+
+**No environment variables needed for builds**:
+
+```nix
+# 1. Configure library with explicit settings
+let castLib = cast.lib.configure {
+  storePath = "/data/cast-store";
+};
+
+# 2. Use configured library
+in castLib.mkDataset {...}
+```
+
+**Configuration Priority**:
+1. Explicit `storePath` parameter in `mkDataset` call
+2. Configuration passed to `cast.lib.configure`
+3. Error with helpful message (no implicit defaults)
+
+**Result**: Works with `nix build --pure` ✅
+
+### Environment Variables (Auto-Generated Outputs)
+
+When a dataset is used as a build input, CAST automatically sets:
+
+- `CAST_DATASET_<NAME>`: Path to dataset `/data` directory
+- `CAST_DATASET_<NAME>_VERSION`: Dataset version
+- `CAST_DATASET_<NAME>_MANIFEST`: Path to manifest.json
+
+These are **outputs**, not configuration inputs. Name transformation: `foo-bar` → `FOO_BAR`
+
+### Future Configuration (`config.toml`)
+
+For future CLI-based operations (not yet implemented):
 
 ```toml
 [storage]
 type = "local"
 root = "/data/cast-store"
 
-[storage.gc]
+[download]
+preferred_downloader = "aria2c"  # curl, wget, aria2c
+max_concurrent = 4
+retry_attempts = 3
+
+[compression]
+algorithm = "zstd"  # zstd, gzip, none
+level = 9  # 0-9
+
+[gc]
 enabled = true
 min_free_space = "100GB"
 keep_recent_days = 30
@@ -431,13 +587,6 @@ keep_recent_days = 30
 # [[storage.tiers]]
 # path = "/hdd/cast-cold"
 ```
-
-### Environment Variables
-
-- `CAST_STORE`: Override storage root path
-- `CAST_CONFIG`: Override config file location
-- `CAST_LOG`: Log level (error/warn/info/debug/trace)
-- `CAST_DATASET_<NAME>`: Auto-set by mkDataset (uppercase, - → _)
 
 ## Technical Decisions Log
 
@@ -458,7 +607,36 @@ keep_recent_days = 30
 - Memory safety for storage operations
 - Excellent performance for hashing
 - Strong ecosystem (blake3, sqlx, tokio)
-- Easy Nix integration via naersk/crane
+- Easy Nix integration via rustPlatform
+
+### Why Pure Configuration (No Environment Variables)?
+**Phase 2 Design Decision**
+
+**Problems with environment variables**:
+- Requires `nix build --impure` (breaks reproducibility)
+- Hard to track which env vars are needed
+- Different values on different machines → different results
+- Violates Nix's pure evaluation model
+
+**Benefits of pure configuration**:
+- ✅ Works with `nix build --pure` (fully reproducible)
+- ✅ All configuration visible in flake.nix
+- ✅ Type-checked at evaluation time
+- ✅ Same input → same output guaranteed
+- ✅ Better error messages (configuration missing vs wrong env var)
+- ✅ Easier to test (no environment setup needed)
+
+**Implementation**:
+```nix
+# Before (Phase 1 - impure)
+CAST_STORE=/data/cast nix build --impure
+
+# After (Phase 2 - pure)
+let castLib = cast.lib.configure {storePath = "/data/cast";};
+in nix build  # No flags needed!
+```
+
+**Trade-off**: Requires explicit configuration in flake.nix, but this is actually a benefit for reproducibility.
 
 ### Why Not Store Everything in /nix/store?
 - Multi-gigabyte files cause:
@@ -495,8 +673,20 @@ keep_recent_days = 30
 
 ---
 
-**Status**: Phase 1 (Design & Skeleton Implementation)
-**Last Updated**: 2025-11-17
+**Status**: Phase 2 Complete (Pure Configuration & Documentation)
+**Last Updated**: 2025-11-18
+
+### Recent Milestones
+- ✅ **2025-11-18**: Phase 2 completed - Pure configuration pattern implemented
+  - cast.lib.configure function
+  - Works with `nix build --pure`
+  - cast-cli as Nix package
+  - Complete documentation (README.md, CONFIGURATION.md)
+  - Database registry examples with flake-parts
+- ✅ **2025-11-17**: Phase 1 completed - MVP core functionality
+  - mkDataset and transform functions
+  - BLAKE3 hashing and local storage
+  - Transformation provenance tracking
 
 ## Task Master AI Instructions
 **Import Task Master's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**

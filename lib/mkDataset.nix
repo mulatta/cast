@@ -3,6 +3,7 @@
 {
   lib,
   pkgs,
+  config ? {},
   ...
 }: {
   name,
@@ -20,17 +21,33 @@
     else manifest;
 
   # Determine CAST store path
-  # Priority: 1) storePath parameter, 2) CAST_STORE env var, 3) default
-  castStore =
+  # Priority: 1) explicit storePath parameter, 2) config.storePath, 3) error
+  effectiveStorePath =
     if storePath != null
     then storePath
-    else builtins.getEnv "CAST_STORE";
+    else if config ? storePath && config.storePath != null
+    then config.storePath
+    else
+      throw ''
+        CAST storePath not configured.
 
-  # Default to ~/.cache/cast if no store path specified
-  effectiveStorePath =
-    if castStore != ""
-    then castStore
-    else builtins.getEnv "HOME" + "/.cache/cast";
+        Please configure storePath in your flake.nix using one of these methods:
+
+        Method 1: flake-parts options (recommended)
+          options.cast = lib.mkOption {
+            type = lib.types.submodule {
+              options.storePath = lib.mkOption { type = lib.types.path; };
+            };
+          };
+          config.cast.storePath = "/data/cast-store";
+
+        Method 2: Pass explicit parameter
+          castLib.mkDataset {
+            storePath = "/data/cast-store";
+            name = "...";
+            manifest = ...;
+          }
+      '';
 
   # Generate dataset environment variable name
   datasetEnvName = lib.toUpper (lib.replaceStrings ["-"] ["_"] name);

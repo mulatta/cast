@@ -2,7 +2,8 @@
   description = "Simple CAST dataset example";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    systems.url = "github:nix-systems/default";
     cast = {
       url = "path:../..";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -13,39 +14,53 @@
     self,
     nixpkgs,
     cast,
+    systems,
+    ...
   }: let
-    system = "x86_64-linux";
-    pkgs = nixpkgs.legacyPackages.${system};
+    forAllSystems = f:
+      nixpkgs.lib.genAttrs (import systems) (system:
+        f {
+          inherit system;
+          pkgs = nixpkgs.legacyPackages.${system};
+        });
   in {
-    packages.${system} = {
+    packages = forAllSystems (_: let
+      # CAST configuration with explicit storePath
+      # For production, use flake-parts options instead (see database-registry example)
+      castLib = cast.lib.configure {
+        storePath = builtins.getEnv "HOME" + "/.cache/cast";
+      };
+    in rec {
       # Example dataset using pre-existing manifest
-      example-dataset = cast.lib.mkDataset {
+      example-dataset = castLib.mkDataset {
         name = "simple-example";
         version = "1.0.0";
         manifest = ./manifest.json;
-        # Use CAST_STORE environment variable (requires --impure flag)
-        # Example: CAST_STORE=$HOME/.cache/cast nix build --impure .#example-dataset
-        storePath = null; # Will use CAST_STORE env var or default
       };
 
       # Default package
-      default = self.packages.${system}.example-dataset;
-    };
+      default = example-dataset;
+    });
 
     # Dev shell with the dataset available
-    devShells.${system}.default = pkgs.mkShell {
-      buildInputs = [
-        self.packages.${system}.example-dataset
-      ];
+    devShells = forAllSystems ({
+      system,
+      pkgs,
+    }: {
+      default = pkgs.mkShell {
+        buildInputs = [
+          self.packages.${system}.example-dataset
+        ];
 
-      shellHook = ''
-        echo "Simple example dataset loaded!"
-        echo "Dataset path: $CAST_DATASET_SIMPLE_EXAMPLE"
-        echo "Manifest: $CAST_DATASET_SIMPLE_EXAMPLE_MANIFEST"
-        echo ""
-        echo "Available files:"
-        ls -lh "$CAST_DATASET_SIMPLE_EXAMPLE"
-      '';
-    };
+        shellHook = ''
+          echo "Simple example dataset loaded!"
+          echo "Dataset path: $CAST_DATASET_SIMPLE_EXAMPLE"
+          echo "Manifest: $CAST_DATASET_SIMPLE_EXAMPLE_MANIFEST"
+          echo ""
+          echo "Available files:"
+          ls -lh "$CAST_DATASET_SIMPLE_EXAMPLE"
+        '';
+      };
+    });
   };
 }
