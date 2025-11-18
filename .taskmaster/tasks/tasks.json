@@ -426,7 +426,7 @@
           8,
           9
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -457,7 +457,7 @@
               2
             ],
             "details": "프로젝트 루트에 README.md를 작성하여 CAST의 목적과 아키텍처를 설명합니다. Nix flake를 통한 설치 방법, cast-cli 바이너리 설치, 환경변수 설정 등을 포함한 상세한 설치 가이드를 제공합니다. 각 cast.lib.* 함수의 파라미터, 반환값, 사용 예제를 포함한 완전한 API 레퍼런스를 작성합니다. docs/ 디렉토리에 아키텍처, 디자인 결정, 기여 가이드라인 등의 추가 문서를 작성합니다.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "문서의 모든 코드 스니펫이 실행 가능한지 확인, 설치 가이드를 따라 실제 설치 테스트"
           },
           {
@@ -468,7 +468,7 @@
               3
             ],
             "details": "Rust clap 라이브러리의 도움말 템플릿을 커스터마이즈하여 더 상세하고 사용자 친화적인 도움말 메시지를 제공합니다. 각 서브커맨드에 대한 예제와 일반적인 사용 패턴을 포함합니다. clap_mangen을 사용하여 man 페이지를 자동 생성하고 Nix derivation에 포함시킵니다. cast(1), cast-put(1), cast-get(1) 등의 섹션별 man 페이지를 제공합니다.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "cast-cli --help의 가독성 확인, man cast 명령 작동 테스트, 모든 서브커맨드 도움말 검증"
           }
         ]
@@ -476,7 +476,7 @@
     ],
     "metadata": {
       "created": "2025-11-17T15:10:33.104Z",
-      "updated": "2025-11-18T02:26:08.024Z",
+      "updated": "2025-11-18T02:28:15.017Z",
       "description": "Tasks for master context"
     }
   }

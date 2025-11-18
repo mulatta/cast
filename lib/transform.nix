@@ -1,7 +1,6 @@
 # Transform dataset
 # Executes transformation on source dataset and generates new manifest with provenance
 {
-  lib,
   pkgs,
   ...
 }: {

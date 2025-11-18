@@ -59,7 +59,15 @@
       "Bash(nix flake check:*)",
       "Bash(nix fmt:*)",
       "Bash(nix flake show:*)",
-      "Bash(nix eval:*)"
+      "Bash(nix eval:*)",
+
+      "mcp__taskmaster-ai__analyze_project_complexity",
+      "mcp__taskmaster-ai__expand_task",
+      "mcp__taskmaster-ai__get_tasks",
+      "mcp__taskmaster-ai__next_task",
+      "mcp__taskmaster-ai__set_task_status",
+      "mcp__taskmaster-ai__update_subtask",
+      "mcp__taskmaster-ai__get_task"
     ],
     "deny": [
       "Bash(jj git push:*)",

@@ -127,7 +127,8 @@
             done
           '';
         };
-      in step2;
+      in
+        step2;
 
       # Default package
       default = self.packages.${system}.example-copy;

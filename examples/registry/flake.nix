@@ -26,20 +26,20 @@
           version = "1.0.0";
           manifest = ./manifests/test-db-1.0.0.json;
         };
-        
+
         "1.1.0" = cast.lib.mkDataset {
           name = "test-db";
           version = "1.1.0";
           manifest = ./manifests/test-db-1.1.0.json;
         };
-        
+
         "2.0.0" = cast.lib.mkDataset {
           name = "test-db";
           version = "2.0.0";
           manifest = ./manifests/test-db-2.0.0.json;
         };
       };
-      
+
       # Example: Protein database versions
       uniprot = {
         "2024-01" = cast.lib.mkDataset {
@@ -47,7 +47,7 @@
           version = "2024-01";
           manifest = ./manifests/uniprot-2024-01.json;
         };
-        
+
         "2024-02" = cast.lib.mkDataset {
           name = "uniprot";
           version = "2024-02";
@@ -61,7 +61,7 @@
       test-db-latest = self.databases.test-db."2.0.0";
       test-db-stable = self.databases.test-db."1.1.0";
       uniprot-latest = self.databases.uniprot."2024-02";
-      
+
       default = self.packages.${system}.test-db-latest;
     };
 
@@ -69,22 +69,22 @@
     devShells.${system} = {
       # Shell with latest test-db
       default = pkgs.mkShell {
-        buildInputs = [ self.databases.test-db."2.0.0" ];
+        buildInputs = [self.databases.test-db."2.0.0"];
         shellHook = ''
           echo "Test DB v2.0.0 loaded"
           echo "Path: $CAST_DATASET_TEST_DB"
         '';
       };
-      
+
       # Shell with v1.1.0 for compatibility testing
       legacy = pkgs.mkShell {
-        buildInputs = [ self.databases.test-db."1.1.0" ];
+        buildInputs = [self.databases.test-db."1.1.0"];
         shellHook = ''
           echo "Test DB v1.1.0 (legacy) loaded"
           echo "Path: $CAST_DATASET_TEST_DB"
         '';
       };
-      
+
       # Shell with multiple versions for migration testing
       migration = pkgs.mkShell {
         buildInputs = [
